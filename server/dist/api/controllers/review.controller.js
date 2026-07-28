@@ -1,0 +1,152 @@
+import prisma from "../utils/prisma.js";
+import { broadcastEvent } from "../sse.js";
+const maskAnonymousName = (name) => {
+    const trimmed = (name ?? 'Anonymous').trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length === 0)
+        return 'A';
+    return words
+        .map((word) => {
+        const w = typeof word === 'string' ? word : String(word || '');
+        if (w.length <= 1)
+            return w.toUpperCase();
+        return (w[0] ?? '').toUpperCase() + '*'.repeat(Math.max(0, w.length - 1));
+    })
+        .join(' ');
+};
+export const createReview = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { orderId, rating, comment, anonymous, displayName } = req.body;
+        if (!rating)
+            return res.status(400).json({ message: 'Missing fields' });
+        let reviewUserId = userId;
+        let order = null;
+        let reviewOrderId = orderId;
+        if (orderId) {
+            order = await prisma.order.findUnique({ where: { id: orderId } });
+            if (!order)
+                return res.status(404).json({ message: 'Order not found' });
+            if (req.user.role !== 'ADMIN' && order.userId !== userId)
+                return res.status(403).json({ message: 'Invalid order' });
+            if (req.user.role !== 'ADMIN' && String(order.status || '').toLowerCase() !== 'completed')
+                return res.status(400).json({ message: 'Order not completed yet' });
+            reviewUserId = req.user.role === 'ADMIN' ? order.userId : userId;
+        }
+        else if (req.user.role !== 'ADMIN') {
+            return res.status(400).json({ message: 'Missing orderId for customer review' });
+        }
+        const displayValue = displayName || (anonymous ? maskAnonymousName(req.user.name || 'Anonymous') : req.user.name || 'Anonymous');
+        const reviewData = {
+            userId: reviewUserId,
+            rating: Number(rating),
+            comment: comment || '',
+            displayName: displayValue,
+            anonymous: Boolean(anonymous),
+            status: req.user.role === 'ADMIN' ? 'approved' : 'pending'
+        };
+        if (reviewOrderId) {
+            reviewData.orderId = reviewOrderId;
+        }
+        const review = await prisma.review.create({
+            data: reviewData,
+            include: {
+                user: { select: { id: true, name: true } },
+                order: { include: { items: { include: { product: true } } } },
+            },
+        });
+        try {
+            broadcastEvent({ type: 'review', action: 'created', data: review });
+        }
+        catch (broadcastError) {
+            console.warn('[review] failed to broadcast create', broadcastError);
+        }
+        res.status(201).json(review);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export const listReviews = async (req, res) => {
+    try {
+        const productId = req.query.productId;
+        const reviews = await prisma.review.findMany({
+            where: productId ? { order: { items: { some: { productId } } } } : {},
+            include: {
+                user: { select: { id: true, name: true } },
+                order: { include: { items: { include: { product: true } } } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        res.json(reviews);
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export const updateReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rating, comment, status, orderId } = req.body;
+        const review = await prisma.review.findUnique({ where: { id } });
+        if (!review)
+            return res.status(404).json({ message: 'Review not found' });
+        if (req.user.role !== 'ADMIN' && review.userId !== req.user.id) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        const updateData = {};
+        if (rating !== undefined)
+            updateData.rating = Number(rating);
+        if (comment !== undefined)
+            updateData.comment = comment;
+        if (orderId !== undefined && req.user.role === 'ADMIN')
+            updateData.orderId = orderId;
+        if (status !== undefined && req.user.role === 'ADMIN')
+            updateData.status = status;
+        const updatedReview = await prisma.review.update({
+            where: { id },
+            data: updateData,
+            include: {
+                user: { select: { id: true, name: true } },
+                order: { include: { items: { include: { product: true } } } },
+            },
+        });
+        try {
+            broadcastEvent({ type: 'review', action: 'updated', data: updatedReview });
+        }
+        catch (broadcastError) {
+            console.warn('[review] failed to broadcast update', broadcastError);
+        }
+        res.json(updatedReview);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export const deleteReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const review = await prisma.review.findUnique({ where: { id } });
+        if (!review)
+            return res.status(404).json({ message: 'Review not found' });
+        if (req.user.role !== 'ADMIN' && review.userId !== req.user.id) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        await prisma.review.delete({ where: { id } });
+        try {
+            broadcastEvent({ type: 'review', action: 'deleted', data: { id } });
+        }
+        catch (broadcastError) {
+            console.warn('[review] failed to broadcast delete', broadcastError);
+        }
+        res.status(204).send();
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export default {};
+//# sourceMappingURL=review.controller.js.map

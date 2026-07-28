@@ -1,0 +1,1 @@
+ALTER TABLE "CartItem" ADD COLUMN "verificationCount" INTEGER NOT NULL DEFAULT 0;

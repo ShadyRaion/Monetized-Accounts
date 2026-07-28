@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         String          @default("USER")
+  isBanned     Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  referralCode String?
+  affiliate    Affiliate?
+  cartItems    CartItem[]
+  favorites    Favorite[]
+  orders       Order[]
+  reviews      Review[]
+  subscribers  Subscriber?
+  tickets      SupportTicket[]
+  messages     TicketMessage[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Product {
+  id                 String      @id @default(uuid())
+  platform           String
+  followers          Int
+  hasVerificationFee Boolean     @default(false)
+  price              Float
+  inStock            Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  badge              String?
+  description        String?
+  features           String[]    @default([])
+  transferTime       String      @default("Instant")
+  type               String      @default("")
+  verificationPrice  Float       @default(0)
+  cartItems          CartItem[]
+  favorites          Favorite[]
+  orderItems         OrderItem[]
+}
+
+model Order {
+  id                   String      @id @default(uuid())
+  userId               String
+  totalAmount          Float
+  status               String      @default("VerifyingPayment")
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  adminNotes           String?
+  affiliateUpdated     Boolean     @default(false)
+  paymentMethod        String      @default("card")
+  referralCode         String?
+  completedAt          DateTime?
+  deliveredAt          DateTime?
+  statusManualOverride Boolean     @default(false)
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items                OrderItem[]
+  review               Review?
+}
+
+model OrderItem {
+  id                String             @id @default(uuid())
+  orderId           String
+  productId         String
+  accountDetails    String?
+  verificationCount Int                @default(0)
+  verificationPrice Float              @default(0)
+  affiliatePurchase AffiliatePurchase?
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Affiliate {
+  userId                           String              @id
+  status                           String              @default("Pending")
+  affiliateCode                    String              @unique @default(uuid())
+  totalEarnings                    Float               @default(0)
+  payoutMethod                     String?
+  payoutAddress                    String?
+  createdAt                        DateTime            @default(now())
+  updatedAt                        DateTime            @updatedAt
+  isContentCreator                 Boolean             @default(false)
+  socialMediaPlatforms             String[]            @default([])
+  commissionRate                   Float               @default(20)
+  commissionRateAutoUpgradeEnabled Boolean             @default(true)
+  user                             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchases                        AffiliatePurchase[]
+}
+
+model AffiliatePurchase {
+  id               String    @id @default(uuid())
+  affiliateId      String
+  orderItemId      String    @unique
+  commissionAmount Float
+  status           String    @default("Pending")
+  createdAt        DateTime  @default(now())
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [userId], onDelete: Cascade)
+  orderItem        OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+}
+
+model SupportTicket {
+  id        String          @id @default(uuid())
+  userId    String
+  type      String
+  subject   String
+  status    String          @default("open")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  TicketMessage[]
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticketId  String
+  senderId  String
+  message   String
+  createdAt DateTime      @default(now())
+  sender    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String
+  orderId     String?  @unique
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+  status      String   @default("pending")
+  anonymous   Boolean  @default(false)
+  displayName String
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id             Int      @id @default(1)
+  siteName       String   @default("Monetized Accounts")
+  description    String   @default("Buy high-quality monetized TikTok and YouTube accounts.")
+  themeColor     String   @default("#ff0000")
+  phone          String?
+  email          String?
+  discordLink    String?
+  logoUrl        String?
+  faviconUrl     String?
+  paymentMethods String   @default("[]")
+  faq            String   @default("[]")
+  updatedAt      DateTime @updatedAt
+}
+
+model Blacklist {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model Faq {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  hidden    Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  quantity  Int      @default(1)
+  verificationCount Int @default(0)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscriber {
+  id             String    @id @default(uuid())
+  userId         String?   @unique
+  email          String    @unique
+  name           String?
+  source         String    @default("newsletter")
+  status         String    @default("active")
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
