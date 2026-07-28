@@ -21,7 +21,10 @@ export function Testimonials() {
 
   // Only show approved testimonials, no mock data
   const displayTestimonials = testimonials.filter(t => t.status === "approved")
-  const repeatedTestimonials = [...displayTestimonials, ...displayTestimonials]
+  const repeatedTestimonials = [...displayTestimonials, ...displayTestimonials].map((testimonial, index) => ({
+    ...testimonial,
+    key: `${testimonial.id}-${index}`
+  }))
   const singleTrackWidth = trackWidth / 2
   const animationSpeed = 0.03
 
@@ -145,9 +148,9 @@ export function Testimonials() {
               onPointerCancel={handlePointerUp}
               style={{ touchAction: "pan-y", cursor: isDragging ? "grabbing" : "grab", userSelect: "none" }}
             >
-              {repeatedTestimonials.map((testimonial, index) => (
+              {repeatedTestimonials.map((testimonial) => (
                 <div
-                  key={`${testimonial.id}-${index}`}
+                  key={testimonial.key}
                   className="flex-shrink-0 min-w-[18rem] max-w-[20rem] bg-gray-50 rounded-3xl p-4 sm:p-6 border border-gray-100 select-none"
                 >
                   <div className="flex gap-0.5 sm:gap-1 mb-2 sm:mb-3">

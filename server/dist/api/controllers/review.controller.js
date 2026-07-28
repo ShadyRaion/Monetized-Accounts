@@ -14,10 +14,19 @@ const maskAnonymousName = (name) => {
     })
         .join(' ');
 };
+const normalizeReviewStatus = (value) => {
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'approved' || normalized === 'rejected' || normalized === 'pending') {
+        return normalized;
+    }
+    return undefined;
+};
 export const createReview = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { orderId, rating, comment, anonymous, displayName } = req.body;
+        const { orderId, rating, comment, anonymous, displayName, status } = req.body;
         if (!rating)
             return res.status(400).json({ message: 'Missing fields' });
         let reviewUserId = userId;
@@ -36,6 +45,7 @@ export const createReview = async (req, res) => {
         else if (req.user.role !== 'ADMIN') {
             return res.status(400).json({ message: 'Missing orderId for customer review' });
         }
+        const requestedStatus = normalizeReviewStatus(status);
         const displayValue = displayName || (anonymous ? maskAnonymousName(req.user.name || 'Anonymous') : req.user.name || 'Anonymous');
         const reviewData = {
             userId: reviewUserId,
@@ -43,7 +53,7 @@ export const createReview = async (req, res) => {
             comment: comment || '',
             displayName: displayValue,
             anonymous: Boolean(anonymous),
-            status: req.user.role === 'ADMIN' ? 'approved' : 'pending'
+            status: req.user.role === 'ADMIN' ? (requestedStatus || 'approved') : 'pending'
         };
         if (reviewOrderId) {
             reviewData.orderId = reviewOrderId;
@@ -96,14 +106,15 @@ export const updateReview = async (req, res) => {
             return res.status(403).json({ message: 'Access denied' });
         }
         const updateData = {};
+        const normalizedStatus = normalizeReviewStatus(status);
         if (rating !== undefined)
             updateData.rating = Number(rating);
         if (comment !== undefined)
             updateData.comment = comment;
         if (orderId !== undefined && req.user.role === 'ADMIN')
             updateData.orderId = orderId;
-        if (status !== undefined && req.user.role === 'ADMIN')
-            updateData.status = status;
+        if (normalizedStatus !== undefined && req.user.role === 'ADMIN')
+            updateData.status = normalizedStatus;
         const updatedReview = await prisma.review.update({
             where: { id },
             data: updateData,

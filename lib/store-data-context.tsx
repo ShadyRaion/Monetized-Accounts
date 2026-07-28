@@ -1057,7 +1057,8 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
           rating: review.rating,
           comment: review.text,
           anonymous: review.anonymous,
-          displayName: review.customerName
+          displayName: review.customerName,
+          status: review.status
         })
       })
 
