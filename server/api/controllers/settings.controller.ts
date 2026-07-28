@@ -1,7 +1,7 @@
 import { type Request, type Response } from 'express';
 import prisma from '../utils/prisma.ts';
 import { broadcastEvent } from '../sse.ts';
-import { storageBucket, supabase } from '../utils/supabase.ts';
+import { storageBucket, getSupabaseClient } from '../utils/supabase.ts';
 
 const safeJsonParse = <T>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback
@@ -86,6 +86,7 @@ export const uploadImage = async (req: any, res: Response) => {
 
     const extension = mimeType === 'image/svg+xml' ? 'svg' : (mimeType.split('/')[1] || 'png')
     const fileName = `${kind || 'asset'}-${Date.now()}-${Math.round(Math.random() * 10000)}.${extension}`
+    const supabase = getSupabaseClient()
     const { error: uploadError } = await supabase.storage
       .from(storageBucket)
       .upload(fileName, buffer, { contentType: mimeType, upsert: true })
