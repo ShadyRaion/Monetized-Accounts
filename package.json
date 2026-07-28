@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "prisma generate --schema prisma/schema.prisma && tsc -p server/tsconfig.json && next build",
-    "start": "tsx server/index.ts",
+    "dev": "next dev",
+    "build": "prisma generate --schema prisma/schema.prisma && next build",
+    "start": "next start",
     "lint": "eslint .",
     "seed": "tsx prisma/seed.ts",
     "backfill:verification-price": "tsx prisma/backfill-verification-price.ts"
