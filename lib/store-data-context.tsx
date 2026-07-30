@@ -263,13 +263,14 @@ function mapBackendOrder(order: any): Order {
 
   for (const item of items) {
     const product = (item.product as any) ?? {}
-    const productId = product.id
+    const productId = product.id ?? item.originalProductId ?? `deleted-${item.id}`
     const verificationPrice = Number(item.verificationPrice ?? 0)
     const isVerified = Number(item.verificationCount ?? 0) > 0
+    const computedName = item.productLabel ?? (product.type ? `${product.platform} ${product.type}` : product.platform) ?? 'Product'
     const baseProduct: OrderProduct = {
       productId,
-      name: product.type ? `${product.platform} ${product.type}` : `${product.platform}`,
-      price: Number(product.price ?? 0),
+      name: computedName,
+      price: Number(item.productPrice ?? product.price ?? 0),
       verificationPrice,
       hasVerification: isVerified,
       verifiedQuantity: isVerified ? Number(item.verificationCount ?? 0) : 0,

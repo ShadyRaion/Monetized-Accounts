@@ -94,7 +94,9 @@ function AffiliatePageContent() {
   const [copied, setCopied] = useState(false)
   const [pendingAffiliateSubmit, setPendingAffiliateSubmit] = useState(false)
   const [isReapplying, setIsReapplying] = useState(false)
+  const [hasScrolledToPending, setHasScrolledToPending] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
+  const pendingSectionRef = useRef<HTMLDivElement>(null)
   const { pendingAction, savePendingAction, clearPendingAction } = usePendingAction()
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentType, setPaymentType] = useState<"paypal" | "crypto" | "">(affiliate?.paymentMethod?.type || "")
@@ -267,6 +269,13 @@ function AffiliatePageContent() {
       setIsReapplying(false)
     }
   }, [affiliate?.status])
+
+  useEffect(() => {
+    if (pendingSectionRef.current && (submitted || affiliate?.status === "pending" || affiliate?.status === "suspended" || affiliate?.status === "rejected") && !hasScrolledToPending) {
+      pendingSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      setHasScrolledToPending(true)
+    }
+  }, [affiliate?.status, submitted, hasScrolledToPending])
 
   // Auto-submit affiliate form if returning from login with pending form data
   useEffect(() => {
@@ -930,7 +939,7 @@ function AffiliatePageContent() {
           </div>
         </section>
         
-        <section className="py-20">
+        <section className="py-20" ref={pendingSectionRef}>
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto">
               {affiliate?.status === "pending" && submitted && !isReapplying ? (

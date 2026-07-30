@@ -5,6 +5,8 @@ import { broadcastEvent } from '../sse.ts'
 type OrderProduct = {
   id: string;
   price: number;
+  platform?: string | null;
+  type?: string | null;
 };
 import {
   AFFILIATE_TIERS,
@@ -66,12 +68,15 @@ export const createOrder = async (req: any, res: Response) => {
       const quantity = Number(item.quantity) || 1;
       const verificationCount = Math.min(Number(item.verificationCount) || 0, quantity);
       const verificationUnitPrice = Number(item.verificationUnitPrice) || 0;
+      const label = `${product.platform} ${product.type}`.trim() || product.type || product.platform || 'Product';
 
       for (let i = 0; i < quantity; i += 1) {
         await prisma.orderItem.create({
           data: {
             orderId: order.id,
             productId: product.id,
+            productLabel: label,
+            productPrice: product.price,
             verificationCount: i < verificationCount ? 1 : 0,
             verificationPrice: i < verificationCount ? verificationUnitPrice : 0
           }
@@ -80,6 +85,11 @@ export const createOrder = async (req: any, res: Response) => {
     }
 
     try { broadcastEvent({ type: 'order', action: 'created', data: order }) } catch (e) {}
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`orders:user:${userId}`)
+      cache.cacheDelete('orders:admin:list')
+    } catch (e) {}
     res.status(201).json(order);
   } catch (error) {
     console.error(error);
@@ -88,10 +98,10 @@ export const createOrder = async (req: any, res: Response) => {
 }
 
 export const calculateOrderItemCommissionAmount = (
-  item: { product?: { price?: number }; verificationPrice?: number },
+  item: { product?: { price?: number }; productPrice?: number; verificationPrice?: number },
   rate: number
 ) => {
-  const productPrice = Number(item.product?.price ?? 0);
+  const productPrice = Number(item.product?.price ?? item.productPrice ?? 0);
   const verificationPrice = Number(item.verificationPrice ?? 0);
   return calculateCommissionAmount(productPrice, verificationPrice, rate);
 };
@@ -126,9 +136,8 @@ const processAffiliateOrderCompletion = async (order: any) => {
 
   for (const item of orderItems) {
     if (item.affiliatePurchase) continue
-    if (!item.product) continue
 
-    const baseAmount = Number(item.product.price || 0) + Number(item.verificationPrice || 0)
+    const baseAmount = Number(item.product?.price ?? item.productPrice ?? 0) + Number(item.verificationPrice || 0)
     const commissionAmount = Number((baseAmount * (currentRate / 100)).toFixed(2))
 
     await prisma.affiliatePurchase.create({
@@ -240,21 +249,22 @@ const createAutoReviewForOrder = async (order: any) => {
 export const getUserOrders = async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
+    const cacheKey = `orders:user:${userId}`
+    try {
+      const cached = (await import('../utils/cache.ts')).cacheGet<any[]>(cacheKey)
+      if (cached) return res.json(cached)
+    } catch (e) { /* ignore cache errors */ }
+
     const orders = await prisma.order.findMany({
       where: { userId },
       include: { items: { include: { product: true } }, review: true, user: true },
       orderBy: { createdAt: 'desc' }
     });
 
-    for (const order of orders) {
-      if (order.status === 'Completed') {
-        const autoReview = await createAutoReviewForOrder(order);
-        if (autoReview) {
-          order.review = autoReview;
-        }
-      }
-    }
+    // Avoid creating auto-reviews during list fetch to reduce DB work and latency.
+    // Auto-review creation still runs when fetching a single order or on status updates.
 
+    try { (await import('../utils/cache.ts')).cacheSet(cacheKey, orders, 3000) } catch (e) {}
     res.json(orders);
   } catch (error) {
     console.error(error);
@@ -285,17 +295,16 @@ export const getOrder = async (req: any, res: Response) => {
 
 export const adminListOrders = async (req: any, res: Response) => {
   try {
+    const cacheKey = 'orders:admin:list'
+    try {
+      const cached = (await import('../utils/cache.ts')).cacheGet<any[]>(cacheKey)
+      if (cached) return res.json(cached)
+    } catch (e) { /* ignore cache errors */ }
+
     const orders = await prisma.order.findMany({ include: { user: true, items: { include: { product: true } }, review: true }, orderBy: { createdAt: 'desc' } });
 
-    for (const order of orders) {
-      if (order.status === 'Completed') {
-        const autoReview = await createAutoReviewForOrder(order);
-        if (autoReview) {
-          order.review = autoReview;
-        }
-      }
-    }
-
+    // Avoid creating auto-reviews during list fetch to reduce DB work and latency.
+    try { (await import('../utils/cache.ts')).cacheSet(cacheKey, orders, 3000) } catch (e) {}
     res.json(orders);
   } catch (error) {
     console.error(error);
@@ -368,6 +377,12 @@ export const updateOrderStatus = async (req: any, res: Response) => {
       await processAffiliateOrderCompletion(updatedOrder)
     }
 
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`orders:user:${updatedOrder.userId}`)
+      cache.cacheDelete('orders:admin:list')
+    } catch (e) {}
+
     const refreshedOrder = await prisma.order.findUnique({ where: { id }, include: { user: true, items: { include: { product: true } }, review: true } });
     if (!refreshedOrder) {
       console.log(`[order] updateOrderStatus failed to refresh order id=${id}`);
@@ -400,7 +415,10 @@ export const adminUpdateOrderDelivery = async (req: any, res: Response) => {
     await prisma.orderItem.updateMany({
       where: {
         orderId: id,
-        productId,
+        OR: [
+          { productId },
+          { originalProductId: productId }
+        ]
       },
       data: {
         accountDetails: deliveryInfo,
@@ -414,6 +432,12 @@ export const adminUpdateOrderDelivery = async (req: any, res: Response) => {
     if (!updatedOrder) {
       return res.status(500).json({ message: 'Unable to refresh order' });
     }
+
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`orders:user:${updatedOrder.userId}`)
+      cache.cacheDelete('orders:admin:list')
+    } catch (e) {}
 
     const allDelivered = updatedOrder.items.every((item: { accountDetails?: string | null }) => Boolean(item.accountDetails));
     const canAutoDeliver = allDelivered && !('statusManualOverride' in updatedOrder ? updatedOrder.statusManualOverride : false) && updatedOrder.status !== 'Completed' && updatedOrder.status !== 'Cancelled' && updatedOrder.status !== 'Rejected';

@@ -150,21 +150,28 @@ export default function OrdersPage() {
                   <div className="border-t pt-4">
                     <h4 className="text-sm font-medium text-gray-500 mb-3">Items</h4>
                     <div className="space-y-2">
-                      {order.products.map((product, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <div>
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/product/${product.productId}`)}
-                              className="font-medium text-left hover:text-[#FE2C55] transition-colors"
-                            >
-                              {product.name}
-                            </button>
-                            <p className="text-sm text-gray-500">Qty: {product.quantity}</p>
+                      {order.products.map((product, index) => {
+                        const hasValidProductLink = product.productId && !product.productId.startsWith('deleted-')
+                        return (
+                          <div key={index} className="flex justify-between items-center">
+                            <div>
+                              {hasValidProductLink ? (
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/product/${product.productId}`)}
+                                  className="font-medium text-left hover:text-[#FE2C55] transition-colors"
+                                >
+                                  {product.name}
+                                </button>
+                              ) : (
+                                <span className="font-medium">{product.name}</span>
+                              )}
+                              <p className="text-sm text-gray-500">Qty: {product.quantity}</p>
+                            </div>
+                            <p className="font-medium">${product.price.toFixed(2)}</p>
                           </div>
-                          <p className="font-medium">${product.price.toFixed(2)}</p>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
 

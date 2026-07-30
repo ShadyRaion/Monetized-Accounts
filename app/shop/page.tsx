@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { formatPrice } from "@/lib/data"
+import { formatFollowers } from "@/lib/utils"
 import { apiPath } from "@/lib/api"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
@@ -36,12 +37,9 @@ export default function ShopPage() {
     const fetchProducts = async () => {
       try {
         const url = apiPath('/products')
-        console.log('Shop page: Fetching products from URL:', url)
         const response = await fetch(url)
-        console.log('Shop page: Response status:', response.status)
         if (response.ok) {
           const data = await response.json()
-          console.log('Shop page: Received products:', data)
           setProducts(Array.isArray(data) ? data : [])
         } else {
           console.error('Shop page: Response not OK:', response.status)
@@ -80,6 +78,7 @@ export default function ShopPage() {
           platform: (p.platform || "TikTok") as "TikTok" | "YouTube",
           type: (p.type || "Unknown") as any,
           followers: p.followers,
+          followersFormatted: formatFollowers(p.followers),
           followersNum: Number(p.followers || 0),
           price: Number(p.price || 0),
           badge: p.badge || "",
@@ -130,6 +129,14 @@ export default function ShopPage() {
     
     return filtered
   }, [accounts, platform, accountType, sortBy, searchQuery])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#FE2C55] border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -224,19 +231,18 @@ export default function ShopPage() {
                         {account.badge}
                       </Badge>
                     )}
-                    <div className="text-white font-bold text-lg">{account.platform}</div>
-                    <div className="text-[#25F4EE] text-sm">{account.type}</div>
+                    <div className="text-white font-semibold text-base">{account.type}</div>
+                    <div className="mt-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/80">
+                      <span className={`px-2 py-1 rounded-full text-white ${account.platform === "TikTok" ? "bg-pink-600" : "bg-red-600"}`}>
+                        {account.platform}
+                      </span>
+                      <span>{account.followersFormatted}</span>
+                    </div>
                   </div>
                   
                   <div className="p-6">
                     <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Users className="w-4 h-4" />
-                          <span>Followers</span>
-                        </div>
-                        <span className="font-bold text-black">{account.followers}</span>
-                      </div>
+                      <div className="text-sm text-gray-600">{account.description}</div>
                       {account.platform === "TikTok" && account.type !== "Non-TTS/Affiliate" && (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-gray-600">

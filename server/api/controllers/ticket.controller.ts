@@ -23,6 +23,11 @@ export const createTicket = async (req: any, res: Response) => {
     });
 
     try { broadcastEvent({ type: 'ticket', action: 'created', data: result }) } catch (e) {}
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`tickets:user:${userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.status(201).json(result);
   } catch (err) {
     console.error(err);
@@ -34,6 +39,12 @@ export const getUserTickets = async (req: any, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+    const cacheKey = `tickets:user:${userId}`
+    try {
+      const cached = (await import('../utils/cache.ts')).cacheGet<any[]>(cacheKey)
+      if (cached) return res.json(cached)
+    } catch (e) {}
+
     const tickets = await prisma.supportTicket.findMany({
       where: { userId },
       include: {
@@ -46,6 +57,7 @@ export const getUserTickets = async (req: any, res: Response) => {
         }
       }
     });
+    try { (await import('../utils/cache.ts')).cacheSet(cacheKey, tickets, 3000) } catch (e) {}
     tickets.sort((a: { updatedAt: Date | string }, b: { updatedAt: Date | string }) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     res.json(tickets);
   } catch (err) {
@@ -78,6 +90,11 @@ export const addMessage = async (req: any, res: Response) => {
 
     const updated = await prisma.supportTicket.findUnique({ where: { id: ticketId }, include: { messages: { include: { sender: { select: { id: true, name: true, email: true, role: true } } } } } });
     try { broadcastEvent({ type: 'ticket', action: 'updated', data: updated }) } catch (e) {}
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`tickets:user:${ticket.userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -89,9 +106,16 @@ export const adminListTickets = async (req: any, res: Response) => {
   try {
     const requester = req.user?.id ?? 'unknown'
     console.debug(`[tickets] adminListTickets requested by user=${requester}`)
+    const cacheKey = 'tickets:admin:list'
+    try {
+      const cached = (await import('../utils/cache.ts')).cacheGet<any[]>(cacheKey)
+      if (cached) return res.json(cached)
+    } catch (e) {}
+
     const tickets = await prisma.supportTicket.findMany({ include: { user: { select: { id: true, name: true, email: true } }, messages: { include: { sender: { select: { id: true, name: true, email: true, role: true } } } } } });
     tickets.sort((a: { updatedAt: Date | string }, b: { updatedAt: Date | string }) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     console.debug(`[tickets] adminListTickets returning ${tickets.length} tickets`)
+    try { (await import('../utils/cache.ts')).cacheSet(cacheKey, tickets, 3000) } catch (e) {}
     res.json(tickets);
   } catch (err) {
     console.error(err);
@@ -102,7 +126,13 @@ export const adminListTickets = async (req: any, res: Response) => {
 export const adminCloseTicket = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const ticket = await prisma.supportTicket.findUnique({ where: { id } });
     const updated = await prisma.supportTicket.update({ where: { id }, data: { status: 'closed' } });
+    try {
+      const cache = await import('../utils/cache.ts')
+      if (ticket?.userId) cache.cacheDelete(`tickets:user:${ticket.userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.json(updated);
   } catch (err) { console.error(err); res.status(500).json({ message: 'Internal server error' }) }
 }
@@ -113,6 +143,11 @@ export const adminReopenTicket = async (req: any, res: Response) => {
     const ticket = await prisma.supportTicket.findUnique({ where: { id } });
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
     const reopened = await prisma.supportTicket.update({ where: { id }, data: { status: 'open' } });
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`tickets:user:${ticket.userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.json(reopened);
   } catch (err) { console.error(err); res.status(500).json({ message: 'Internal server error' }) }
 }
@@ -128,6 +163,11 @@ export const updateTicket = async (req: any, res: Response) => {
     const normalized = String(status).toLowerCase();
     if (!['open','replied','closed'].includes(normalized)) return res.status(400).json({ message: 'Invalid status' });
     const updated = await prisma.supportTicket.update({ where: { id }, data: { status: normalized } });
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete(`tickets:user:${ticket.userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.json(updated);
   } catch (err) { console.error(err); res.status(500).json({ message: 'Internal server error' }) }
 }
@@ -135,9 +175,15 @@ export const updateTicket = async (req: any, res: Response) => {
 export const deleteTicket = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const ticket = await prisma.supportTicket.findUnique({ where: { id } });
     // Delete messages then ticket
     await prisma.ticketMessage.deleteMany({ where: { ticketId: id } });
     await prisma.supportTicket.delete({ where: { id } });
+    try {
+      const cache = await import('../utils/cache.ts')
+      if (ticket?.userId) cache.cacheDelete(`tickets:user:${ticket.userId}`)
+      cache.cacheDelete('tickets:admin:list')
+    } catch (e) {}
     res.status(204).send();
   } catch (err) { console.error(err); res.status(500).json({ message: 'Internal server error' }) }
 }

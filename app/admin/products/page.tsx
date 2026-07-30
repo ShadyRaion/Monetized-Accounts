@@ -50,6 +50,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
+const PRODUCT_TYPES = [
+  "US TikTok Shop",
+  "UK TikTok Shop",
+  "Non-TTS/Affiliate",
+  "YouTube Aged",
+  "YouTube Monetized"
+]
+
 export default function ProductsPage() {
   const { user, isLoading } = useAdminAuth()
   const { products, addProduct, updateProduct, deleteProduct, toggleProductStock } = useStoreData()
@@ -67,7 +75,7 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState({
     id: "",
     platform: "TikTok" as "TikTok" | "YouTube",
-    type: "",
+    type: PRODUCT_TYPES[0],
     followers: "",
     price: 0,
     verificationEnabled: false,
@@ -106,17 +114,27 @@ export default function ProductsPage() {
   const uniqueTypes = [...new Set(products.map(p => p.type).filter((type): type is string => !!(type && type.trim())))]
   const validTypes = uniqueTypes.length > 0 ? uniqueTypes : []
 
+  const generateProductId = (platform: string, type: string, followers: string) => {
+    const slug = `${platform}-${type}-${followers}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-+/g, "-")
+    return `${slug || "product"}-${Date.now().toString().slice(-5)}`
+  }
+
   const handleAddProduct = () => {
-    if (!formData.id || !formData.type || formData.price <= 0) {
+    if (!formData.type || formData.price <= 0) {
       toast.error("Please fill in all required fields")
       return
     }
 
+    const id = formData.id || generateProductId(formData.platform, formData.type, formData.followers)
     const newProduct: Product = {
-      id: formData.id,
+      id,
       platform: formData.platform,
       type: formData.type,
-      followers: formData.followers,
+      followers: String(formData.followers || "0"),
       price: formData.price,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
       description: formData.description,
@@ -219,7 +237,7 @@ export default function ProductsPage() {
     setFormData({
       id: "",
       platform: "TikTok",
-      type: "",
+      type: PRODUCT_TYPES[0],
       followers: "",
       price: 0,
       verificationEnabled: false,
@@ -484,16 +502,16 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="id">Product ID *</Label>
-          <Input
-            id="id"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            placeholder="e.g., us-tts-25k"
-            disabled={isEdit}
-          />
-        </div>
+        {isEdit && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="id">Product ID</Label>
+            <Input
+              id="id"
+              value={formData.id}
+              disabled
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="platform">Platform *</Label>
           <Select value={formData.platform} onValueChange={(v) => setFormData({ ...formData, platform: v as "TikTok" | "YouTube" })}>
@@ -510,12 +528,18 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="type">Type *</Label>
-          <Input
-            id="type"
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            placeholder="e.g., US TikTok Shop"
-          />
+          <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select account type" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRODUCT_TYPES.map((typeOption) => (
+                <SelectItem key={typeOption} value={typeOption}>
+                  {typeOption}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="followers">Followers</Label>
@@ -616,7 +640,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
           checked={formData.inStock}
           onCheckedChange={(checked) => setFormData({ ...formData, inStock: checked })}
         />
-        <Label htmlFor="inStock">In Stock</Label>
+        <Label htmlFor="inStock">Visible</Label>
       </div>
     </div>
   )

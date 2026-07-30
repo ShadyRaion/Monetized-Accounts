@@ -83,13 +83,16 @@ model Order {
 model OrderItem {
   id                String             @id @default(uuid())
   orderId           String
-  productId         String
+  productId         String?
+  originalProductId String?
+  productLabel      String?
+  productPrice      Float?
   accountDetails    String?
   verificationCount Int                @default(0)
   verificationPrice Float              @default(0)
   affiliatePurchase AffiliatePurchase?
   order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product           Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
 }
 
 model Affiliate {

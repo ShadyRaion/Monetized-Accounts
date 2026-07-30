@@ -62,16 +62,14 @@ export function Header() {
               settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.storeName} className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg object-cover" />
               ) : (
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm" style={{ backgroundColor: settings.primaryColor }}>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm" style={{ backgroundColor: settings.primaryColor || '#000' }}>
                   <span className="font-bold text-white">{settings.storeName.slice(0, 2).toUpperCase()}</span>
                 </div>
               )
             ) : (
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm bg-gray-300">
-                <span className="font-bold text-white">MO</span>
-              </div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gray-200 animate-pulse" />
             )}
-            <span className="font-bold text-sm sm:text-lg text-black">{isLoaded ? settings.storeName : "..."}</span>
+            <span className="font-bold text-sm sm:text-lg text-black">{isLoaded ? settings.storeName : <span className="inline-block h-4 w-24 rounded-full bg-gray-200 animate-pulse" />}</span>
           </Link>
           
           <nav className="hidden lg:flex items-center gap-6 lg:gap-8">

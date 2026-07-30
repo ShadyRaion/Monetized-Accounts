@@ -120,12 +120,14 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000)
 
     const loadSettings = async () => {
       if (typeof window === 'undefined') return
 
       try {
-        const response = await apiFetch(apiPath('/settings'))
+        const response = await apiFetch(apiPath('/settings'), { signal: controller.signal })
         if (!response.ok) {
           throw new Error(`Failed to load store settings: ${response.status}`)
         }
@@ -145,8 +147,13 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setSettings(loadedSettings)
         }
-      } catch (error) {
-        console.error('Failed to load store settings from API', error)
+      } catch (error: any) {
+        if (error?.name === 'AbortError') {
+          console.error('[store-settings] settings request timed out after 10 seconds')
+        } else {
+          console.error('Failed to load store settings from API', error)
+        }
+
         if (!cancelled) {
           setSettings(defaultSettings)
         }
@@ -161,6 +168,8 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true
+      window.clearTimeout(timeoutId)
+      controller.abort()
     }
   }, [])
 
@@ -299,14 +308,6 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSaving(false)
     }
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-sm text-gray-500">
-        Loading store settings...
-      </div>
-    )
   }
 
   return (

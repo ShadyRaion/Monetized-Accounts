@@ -1,6 +1,7 @@
 import { type Request, type Response } from 'express';
 import prisma from '../utils/prisma.ts';
 import { broadcastEvent } from '../sse.ts';
+import { cacheDeletePrefix, cacheGet, cacheSet } from '../utils/cache.ts';
 
 const maskAnonymousName = (name?: string) => {
   const trimmed = (name ?? 'Anonymous').trim();
@@ -72,6 +73,9 @@ export const createReview = async (req: any, res: Response) => {
     } catch (broadcastError) {
       console.warn('[review] failed to broadcast create', broadcastError)
     }
+    try {
+      cacheDeletePrefix('reviews:')
+    } catch (e) {}
     res.status(201).json(review);
   } catch (error) {
     console.error(error);
@@ -81,15 +85,29 @@ export const createReview = async (req: any, res: Response) => {
 
 export const listReviews = async (req: Request, res: Response) => {
   try {
+    const cacheKey = `reviews:${String(req.query.productId || '')}`
+    const cached = cacheGet<any[]>(cacheKey)
+    if (cached) {
+      return res.json(cached)
+    }
     const productId = req.query.productId as string | undefined;
     const reviews = await prisma.review.findMany({
       where: productId ? { order: { items: { some: { productId } } } } : {},
       include: {
         user: { select: { id: true, name: true } },
-        order: { include: { items: { include: { product: true } } } },
+        order: {
+          select: {
+            id: true,
+            items: {
+              include: { product: true },
+              take: 1,
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
+    cacheSet(cacheKey, reviews, 5000)
     res.json(reviews);
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
@@ -127,6 +145,9 @@ export const updateReview = async (req: any, res: Response) => {
     } catch (broadcastError) {
       console.warn('[review] failed to broadcast update', broadcastError)
     }
+    try {
+      cacheDeletePrefix('reviews:')
+    } catch (e) {}
 
     res.json(updatedReview);
   } catch (error) {
@@ -150,6 +171,9 @@ export const deleteReview = async (req: any, res: Response) => {
     } catch (broadcastError) {
       console.warn('[review] failed to broadcast delete', broadcastError)
     }
+    try {
+      cacheDeletePrefix('reviews:')
+    } catch (e) {}
     res.status(204).send();
   } catch (error) {
     console.error(error);

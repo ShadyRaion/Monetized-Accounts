@@ -197,18 +197,25 @@ export const runMiddleware = async (
 ) => {
   let nextCalled = false
 
-  await new Promise<void>((resolve, reject) => {
+  return await new Promise<boolean>((resolve, reject) => {
     const next = (err?: any) => {
       if (err) {
         reject(err)
         return
       }
       nextCalled = true
-      resolve()
+      resolve(!res.ended)
     }
 
-    Promise.resolve(middleware(req as any, res as any, next)).catch(reject)
+    // Run the middleware and if it resolves without calling `next`,
+    // check if it ended the response and resolve accordingly to avoid hangs.
+    Promise.resolve(middleware(req as any, res as any, next))
+      .then(() => {
+        if (res.ended) {
+          resolve(false)
+        }
+        // If middleware returned but didn't end response, we wait for `next` to be called.
+      })
+      .catch(reject)
   })
-
-  return nextCalled && !res.ended
 }

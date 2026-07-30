@@ -164,15 +164,25 @@ const matchRoute = (method: string, path: string) => {
 }
 
 const handleRequest = async (req: Request) => {
+  const start = Date.now()
   const expressReq = await createExpressRequest(req)
   const expressRes = new ExpressResponseAdapter()
   expressRes.setHeader('Access-Control-Allow-Origin', '*')
   expressRes.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS')
   expressRes.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
 
+  try {
+    console.log(`[api] start ${expressReq.method} ${expressReq.path}`)
+  } catch (e) {
+    /* ignore logging errors */
+  }
+
   const match = matchRoute(expressReq.method, expressReq.path)
   if (!match) {
     expressRes.status(404).json({ message: 'Not found' })
+    try {
+      console.log(`[api] ${expressReq.method} ${expressReq.path} -> 404 (${Date.now() - start}ms)`)
+    } catch (e) {}
     return toNextResponse(expressRes)
   }
 
@@ -182,6 +192,9 @@ const handleRequest = async (req: Request) => {
     for (const middleware of match.route.middleware) {
       await runMiddleware(middleware, expressReq, expressRes)
       if (expressRes.ended) {
+        try {
+          console.log(`[api] ${expressReq.method} ${expressReq.path} -> ended by middleware status=${expressRes.statusCode} (${Date.now() - start}ms)`)
+        } catch (e) {}
         return toNextResponse(expressRes)
       }
     }
@@ -195,6 +208,10 @@ const handleRequest = async (req: Request) => {
       expressRes.status(500).json({ message: 'Internal server error' })
     }
   }
+
+  try {
+    console.log(`[api] ${expressReq.method} ${expressReq.path} -> ${match.route.path} status=${expressRes.statusCode} time=${Date.now() - start}ms`)
+  } catch (e) {}
 
   return toNextResponse(expressRes)
 }

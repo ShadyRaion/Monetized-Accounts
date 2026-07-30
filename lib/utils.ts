@@ -34,6 +34,35 @@ export function formatRevenue(value: number | string): string {
   })}$`
 }
 
+export function formatFollowers(value: number | string): string {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '0'
+    if (value >= 1000) {
+      return `${Math.round(value / 100) / 10}K`
+    }
+    return String(value)
+  }
+
+  if (typeof value !== 'string') {
+    return '0'
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) return '0'
+
+  const normalized = trimmed.replace(/\+/g, '')
+  const match = normalized.match(/^([0-9]*\.?[0-9]+)\s*([KM])?$/i)
+  if (!match) return trimmed
+
+  const numberPortion = parseFloat(match[1])
+  if (!Number.isFinite(numberPortion)) return trimmed
+
+  const suffix = match[2]?.toUpperCase()
+  if (suffix === 'K') return `${numberPortion}K`
+  if (suffix === 'M') return `${numberPortion}M`
+  return String(Math.round(numberPortion))
+}
+
 export function getGrowthPercentage(current: number, previous: number): number {
   if (previous === 0) {
     return current > 0 ? 100 : 0

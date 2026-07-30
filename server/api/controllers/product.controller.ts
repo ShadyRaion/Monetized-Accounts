@@ -19,7 +19,12 @@ export const previewProducts = async (req: Request, res: Response) => {
 
 export const listProducts = async (req: Request, res: Response) => {
   try {
+    const cacheKey = 'products:list'
+    const cached = (await import('../utils/cache.ts')).cacheGet<any[]>(cacheKey)
+    if (cached) return res.json(cached)
+
     const products = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } });
+    (await import('../utils/cache.ts')).cacheSet(cacheKey, products, 5000)
     res.json(products);
   } catch (error) {
     console.error('listProducts error:', error);
@@ -147,6 +152,10 @@ export const createProduct = async (req: Request, res: Response) => {
     } catch (broadcastError) {
       console.warn('[product] failed to broadcast create', broadcastError)
     }
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('products:list')
+    } catch (e) {}
     res.status(201).json(product)
   } catch (error) {
     console.error(error)
@@ -166,6 +175,10 @@ export const updateProduct = async (req: Request, res: Response) => {
     } catch (broadcastError) {
       console.warn('[product] failed to broadcast update', broadcastError)
     }
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('products:list')
+    } catch (e) {}
     res.json(product)
   } catch (error: any) {
     console.error('updateProduct error:', error)
@@ -192,10 +205,18 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
     console.log('deleteProduct reference counts', { id, orderItemCount, favoriteCount, cartItemCount });
 
-    if (orderItemCount > 0) {
-      console.log('deleteProduct blocked: product is referenced by order items', { orderItemCount });
+    if (favoriteCount > 0 || cartItemCount > 0) {
+      console.log('deleteProduct blocked: product is referenced by favorites/cart items', { favoriteCount, cartItemCount });
       return res.status(400).json({
-        message: `Cannot delete product because it is referenced by ${orderItemCount} existing order item(s).`,
+        message: `Cannot delete product because it is referenced by ${favoriteCount} favorite(s) and ${cartItemCount} cart item(s).`,
+      });
+    }
+
+    if (orderItemCount > 0) {
+      console.log('deleteProduct preserving order history for order items referenced by product', { orderItemCount });
+      await prisma.orderItem.updateMany({
+        where: { productId: id },
+        data: { productId: null }
       });
     }
 
@@ -213,6 +234,10 @@ export const deleteProduct = async (req: Request, res: Response) => {
     } catch (broadcastError) {
       console.warn('[product] failed to broadcast delete', broadcastError)
     }
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('products:list')
+    } catch (e) {}
     return res.json({ message: 'Deleted' });
   } catch (error: unknown) {
     console.error('deleteProduct error:', error);

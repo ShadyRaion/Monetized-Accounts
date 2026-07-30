@@ -102,7 +102,7 @@ const mapTicket = (ticket: any, currentUserId?: string): SupportTicket => {
   }
 }
 
-const fetchFavorites = async (token: string): Promise<string[]> => {
+const fetchFavorites = async (token?: string): Promise<string[]> => {
   try {
     const response = await apiFetch(apiPath('/favorites'), {
       headers: authHeaders()
@@ -116,7 +116,7 @@ const fetchFavorites = async (token: string): Promise<string[]> => {
   }
 }
 
-const fetchSupportTickets = async (token: string, currentUserId?: string): Promise<SupportTicket[]> => {
+const fetchSupportTickets = async (token?: string, currentUserId?: string): Promise<SupportTicket[]> => {
   try {
     const response = await apiFetch(apiPath('/tickets/me'), {
       headers: authHeaders()
@@ -156,13 +156,17 @@ const profileResponse = await apiFetch(apiPath('/auth/profile'), {
         }
 
         setUser(userData)
-        const [favoriteIds, tickets] = await Promise.all([
-          fetchFavorites(''),
-          fetchSupportTickets('', userData.id)
-        ])
+        setIsLoading(false)
 
-        setFavorites(favoriteIds)
-        setSupportTickets(tickets)
+        void Promise.all([
+          fetchFavorites(),
+          fetchSupportTickets(undefined, userData.id)
+        ]).then(([favoriteIds, tickets]) => {
+          setFavorites(favoriteIds)
+          setSupportTickets(tickets)
+        }).catch((error) => {
+          console.warn('Failed to load favorites or tickets after session restore:', error)
+        })
       } catch (error) {
         console.warn('Failed to restore session:', error)
         setUser(null)
@@ -198,8 +202,8 @@ const response = await apiFetch(apiPath('/auth/login'), {
         }
         setUser(userData)
         const [favoriteIds, tickets] = await Promise.all([
-          fetchFavorites(''),
-          fetchSupportTickets('', userData.id)
+          fetchFavorites(),
+          fetchSupportTickets(undefined, userData.id)
         ])
 
         setFavorites(favoriteIds)
@@ -250,8 +254,8 @@ const response = await apiFetch(apiPath('/auth/register'), {
         }
         setUser(userData)
         const [favoriteIds, tickets] = await Promise.all([
-          fetchFavorites(''),
-          fetchSupportTickets('', userData.id)
+          fetchFavorites(),
+          fetchSupportTickets(undefined, userData.id)
         ])
 
         setFavorites(favoriteIds)
@@ -371,7 +375,7 @@ const response = await apiFetch(apiPath('/auth/password'), {
       }
       const newTicketData = await response.json()
       const newTicketId = newTicketData.id
-      const tickets = await fetchSupportTickets('', user.id)
+      const tickets = await fetchSupportTickets(undefined, user.id)
       setSupportTickets(tickets)
       return newTicketId
     } catch (error) {
@@ -404,7 +408,7 @@ const response = await apiFetch(apiPath('/auth/password'), {
   const refreshSupportTickets = async () => {
     if (!user) return
     try {
-      const tickets = await fetchSupportTickets('', user.id)
+      const tickets = await fetchSupportTickets(undefined, user.id)
       setSupportTickets(tickets)
     } catch (err) {
       console.warn('Failed to refresh support tickets', err)

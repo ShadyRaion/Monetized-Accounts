@@ -4,7 +4,13 @@ import { broadcastEvent } from '../sse.ts'
 
 export const listSubscribers = async (_req: Request, res: Response) => {
   try {
+    const cacheKey = 'subscribers:list'
+    const cache = await import('../utils/cache.ts')
+    const cached = cache.cacheGet<any[]>(cacheKey)
+    if (cached) return res.json(cached)
+
     const subscribers = await prisma.subscriber.findMany({ orderBy: { subscribedAt: 'desc' } })
+    cache.cacheSet(cacheKey, subscribers, 5000)
     res.json(subscribers)
   } catch (error) {
     console.error('listSubscribers error', error)
@@ -50,6 +56,11 @@ export const createSubscriber = async (req: Request, res: Response) => {
         console.warn('[subscriber] failed to broadcast update', broadcastError)
       }
 
+      try {
+        const cache = await import('../utils/cache.ts')
+        cache.cacheDelete('subscribers:list')
+      } catch (e) {}
+
       return res.status(200).json(existing)
     }
 
@@ -69,6 +80,11 @@ export const createSubscriber = async (req: Request, res: Response) => {
     } catch (broadcastError) {
       console.warn('[subscriber] failed to broadcast create', broadcastError)
     }
+
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('subscribers:list')
+    } catch (e) {}
 
     res.status(201).json(subscriber)
   } catch (error) {
@@ -112,6 +128,10 @@ export const deleteSubscriber = async (req: Request, res: Response) => {
     } catch (broadcastError) {
       console.warn('[subscriber] failed to broadcast delete', broadcastError)
     }
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('subscribers:list')
+    } catch (e) {}
     res.json({ success: true })
   } catch (error) {
     console.error('deleteSubscriber error', error)

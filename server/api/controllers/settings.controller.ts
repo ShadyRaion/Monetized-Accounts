@@ -15,6 +15,11 @@ const safeJsonParse = <T>(value: string | null | undefined, fallback: T): T => {
 
 export const getSettings = async (req: Request, res: Response) => {
   try {
+    const cacheKey = 'settings:singleton'
+    try {
+      const cached = (await import('../utils/cache.ts')).cacheGet<any>(cacheKey)
+      if (cached) return res.json(cached)
+    } catch (err) { /* ignore cache errors */ }
     const s = await prisma.settings.findUnique({ where: { id: 1 } });
     if (!s) {
       return res.status(404).json({ message: 'Settings not found' });
@@ -32,6 +37,20 @@ export const getSettings = async (req: Request, res: Response) => {
       paymentSettings: safeJsonParse<any>(s.paymentMethods, undefined),
       faqs: safeJsonParse<any[]>(s.faq, []),
     });
+    try {
+      (await import('../utils/cache.ts')).cacheSet(cacheKey, {
+        storeName: s.siteName,
+        storeDescription: s.description,
+        primaryColor: s.themeColor,
+        storePhone: s.phone || '',
+        storeEmail: s.email || '',
+        storeDiscordLink: s.discordLink || '',
+        logoUrl: s.logoUrl || null,
+        faviconUrl: s.faviconUrl || null,
+        paymentSettings: safeJsonParse<any>(s.paymentMethods, undefined),
+        faqs: safeJsonParse<any[]>(s.faq, []),
+      }, 10000)
+    } catch (err) { /* ignore cache errors */ }
   } catch (error) {
     console.error('[settings] getSettings error', error)
     res.status(500).json({ message: 'Internal server error' });
@@ -147,6 +166,10 @@ export const updateSettings = async (req: any, res: Response) => {
     } catch (broadcastError) {
       console.warn('[settings] failed to broadcast update', broadcastError)
     }
+    try {
+      const cache = await import('../utils/cache.ts')
+      cache.cacheDelete('settings:singleton')
+    } catch (e) {}
 
     res.json(payload)
   } catch (error) {
