@@ -47,29 +47,27 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAdminSession = async () => {
+      // Set as ready immediately - don't block on auth check
+      setIsLoading(false)
+      setAuthReady(true)
+      setSessionChecked(true)
+      
       try {
         const response = await apiFetch(apiPath('/auth/profile'), {
           headers: authHeaders()
         })
         if (!response.ok) {
-          throw new Error('Invalid admin session')
+          return
         }
         const userData = await response.json()
         if (userData?.role !== 'ADMIN') {
           setUser(null)
-          setAuthReady(true)
-          setSessionChecked(true)
-          setIsLoading(false)
           return
         }
         setUser(userData)
       } catch (error) {
         console.warn('Admin session restore failed:', error)
         setUser(null)
-      } finally {
-        setAuthReady(true)
-        setSessionChecked(true)
-        setIsLoading(false)
       }
     }
 
