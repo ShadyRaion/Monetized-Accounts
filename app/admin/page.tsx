@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useStoreData } from "@/lib/store-data-context"
-import { formatRevenue, getGrowthPercentage } from "@/lib/utils"
+import { formatRevenue, getGrowthPercentage, formatSafeDate, safeDate } from "@/lib/utils"
 import { format } from "date-fns"
 import {
   LineChart,
@@ -35,7 +35,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   processing: "bg-blue-100 text-blue-800",
   completed: "bg-green-100 text-green-800",
-  refunded: "bg-orange-100 text-orange-800",
+  refunded: "bg-orange-100 text-orange-100",
   cancelled: "bg-red-100 text-red-800"
 }
 
@@ -68,20 +68,36 @@ export default function AdminDashboardPage() {
   yesterday.setDate(today.getDate() - 1)
 
   const revenueToday = completedOrders.reduce((sum, order) => {
-    const orderDate = new Date(order.date)
-    return format(orderDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd") ? sum + Number(order.total || 0) : sum
+    const orderDate = safeDate(order.date)
+    return orderDate && format(orderDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
+      ? sum + Number(order.total || 0)
+      : sum
   }, 0)
 
   const revenueYesterday = completedOrders.reduce((sum, order) => {
-    const orderDate = new Date(order.date)
-    return format(orderDate, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd") ? sum + Number(order.total || 0) : sum
+    const orderDate = safeDate(order.date)
+    return orderDate && format(orderDate, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd")
+      ? sum + Number(order.total || 0)
+      : sum
   }, 0)
 
-  const ordersToday = completedOrders.filter(order => format(new Date(order.date), "yyyy-MM-dd") === format(today, "yyyy-MM-dd")).length
-  const ordersYesterday = completedOrders.filter(order => format(new Date(order.date), "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd")).length
+  const ordersToday = completedOrders.filter(order => {
+    const orderDate = safeDate(order.date)
+    return orderDate ? format(orderDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd") : false
+  }).length
+  const ordersYesterday = completedOrders.filter(order => {
+    const orderDate = safeDate(order.date)
+    return orderDate ? format(orderDate, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd") : false
+  }).length
 
-  const customersToday = customers.filter(customer => format(new Date(customer.firstPurchaseDate), "yyyy-MM-dd") === format(today, "yyyy-MM-dd")).length
-  const customersYesterday = customers.filter(customer => format(new Date(customer.firstPurchaseDate), "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd")).length
+  const customersToday = customers.filter(customer => {
+    const customerDate = safeDate(customer.firstPurchaseDate)
+    return customerDate ? format(customerDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd") : false
+  }).length
+  const customersYesterday = customers.filter(customer => {
+    const customerDate = safeDate(customer.firstPurchaseDate)
+    return customerDate ? format(customerDate, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd") : false
+  }).length
 
   const conversionToday = totalOrders > 0 ? ((ordersToday / totalOrders) * 100) : 0
   const conversionYesterday = totalOrders > 0 ? ((ordersYesterday / totalOrders) * 100) : 0
@@ -122,8 +138,13 @@ export default function AdminDashboardPage() {
 
   // Get recent orders (last 10)
   const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => (safeDate(b.date)?.getTime() ?? 0) - (safeDate(a.date)?.getTime() ?? 0))
     .slice(0, 10)
+
+  const formatSafeDate = (value: string | undefined | null, pattern: string) => {
+    const date = safeDate(value)
+    return date ? format(date, pattern) : ""
+  }
 
   // Build revenue chart data from real completed orders
   const getRevenueData = () => {
@@ -159,7 +180,8 @@ export default function AdminDashboardPage() {
           : format(targetDate, "yyyy-MM-dd")
 
       const revenue = completedOrders.reduce((sum, order) => {
-        const orderDate = new Date(order.date)
+        const orderDate = safeDate(order.date)
+        if (!orderDate) return sum
         const matches = revenueView === "monthly"
           ? format(orderDate, "yyyy-MM") === key
           : revenueView === "weekly"
@@ -243,7 +265,7 @@ export default function AdminDashboardPage() {
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => {
                       if (revenueView === "daily") {
-                        return format(new Date(value), "MMM d")
+                        return formatSafeDate(String(value), "MMM d")
                       }
                       return value
                     }}
@@ -253,7 +275,7 @@ export default function AdminDashboardPage() {
                     formatter={(value: number) => [formatRevenue(value), "Revenue"]}
                     labelFormatter={(label) => {
                       if (revenueView === "daily") {
-                        return format(new Date(label), "MMMM d, yyyy")
+                        return formatSafeDate(String(label), "MMMM d, yyyy")
                       }
                       return label
                     }}
@@ -347,7 +369,7 @@ export default function AdminDashboardPage() {
                       </Badge>
                     </td>
                     <td className="py-1.5 sm:py-2 px-1 sm:px-2 text-[9px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(order.date), "MMM d")}
+                      {formatSafeDate(order.date, "MMM d")}
                     </td>
                   </tr>
                 ))}

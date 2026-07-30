@@ -19,6 +19,7 @@ import { useStoreData } from "@/lib/store-data-context"
 import { Search, Users, Download, Eye, Lock, Unlock, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { formatSafeDate } from "@/lib/utils"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,10 +30,8 @@ import {
 } from "@/components/ui/breadcrumb"
 
 const formatCustomerDate = (rawDate: string | undefined) => {
-  const date = rawDate ? new Date(rawDate) : null
-  return date instanceof Date && !isNaN(date.getTime())
-    ? format(date, "MMM d, yyyy")
-    : "-"
+  const formatted = formatSafeDate(rawDate, "MMM d, yyyy")
+  return formatted || "-"
 }
 
 export default function CustomersPage() {

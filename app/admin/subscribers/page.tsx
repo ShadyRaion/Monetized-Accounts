@@ -22,6 +22,7 @@ import type { Subscriber } from "@/lib/types"
 import { Mail, Search, Download, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { formatSafeDate } from "@/lib/utils"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -131,7 +132,7 @@ export default function SubscribersPage() {
       key: "subscribedDate",
       label: "Subscribed",
       sortable: true,
-      render: (subscriber) => format(new Date(subscriber.subscribedDate), "MMM d, yyyy")
+      render: (subscriber) => formatSafeDate(subscriber.subscribedDate, "MMM d, yyyy")
     },
     {
       key: "source",

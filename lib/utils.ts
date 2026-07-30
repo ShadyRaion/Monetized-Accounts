@@ -1,5 +1,17 @@
+import { format } from 'date-fns'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+
+export function safeDate(value: string | undefined | null): Date | null {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatSafeDate(value: string | undefined | null, pattern: string): string {
+  const date = safeDate(value)
+  return date ? format(date, pattern) : ""
+}
 
 export function getAnonymousInitials(name: string) {
   const trimmed = name?.trim() ?? ""

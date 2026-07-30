@@ -697,7 +697,7 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
       const affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
         .then(async (res) => {
           if (res.ok) return await res.json()
-          if (res.status === 403) {
+          if ([401, 403, 404].includes(res.status)) {
             const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
             return adminRes.ok ? await adminRes.json() : null
           }

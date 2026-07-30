@@ -28,6 +28,7 @@ import {
 import { MessageSquare, Mail, Trash2, Reply, Send, User } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { formatSafeDate } from "@/lib/utils"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -355,7 +356,7 @@ function MessagesClient() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-[7px] sm:text-xs text-muted-foreground">
-                      {format(new Date(ticket.createdAt), "MMM d, h:mm a")}
+                      {formatSafeDate(ticket.createdAt, "MMM d, h:mm a")}
                     </span>
                     {ticket.replies.length > 0 && (
                       <span className="text-[7px] sm:text-xs text-muted-foreground">
@@ -405,7 +406,7 @@ function MessagesClient() {
                   )}
                 </div>
                 <div className="text-[8px] sm:text-xs text-muted-foreground mt-1">
-                  Started {format(new Date(selectedTicket.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                  Started {formatSafeDate(selectedTicket.createdAt, "MMM d, yyyy 'at' h:mm a")}
                   {selectedTicket.userId && <span className="ml-2 text-blue-600">Registered User</span>}
                 </div>
               </div>
@@ -427,7 +428,7 @@ function MessagesClient() {
                         <p key={i} className="text-xs sm:text-sm whitespace-pre-wrap">{line}</p>
                       ))}
                     </div>
-                    <div className="text-[8px] text-muted-foreground mt-1 text-right">{format(new Date(selectedTicket.createdAt), "MMM d, h:mm a")}</div>
+                    <div className="text-[8px] text-muted-foreground mt-1 text-right">{formatSafeDate(selectedTicket.createdAt, "MMM d, h:mm a")}</div>
                   </div>
 
                   {/* Replies */}
@@ -445,7 +446,7 @@ function MessagesClient() {
                             <div key={i} className="text-xs sm:text-sm whitespace-pre-wrap" style={{ fontSize: '0.85rem', lineHeight: 1.25 }}>{line}</div>
                           ))}
                         </div>
-                        <div className="text-[8px] text-muted-foreground mt-1" style={{ textAlign: reply.isAdmin ? 'right' : 'left' }}>{format(new Date(reply.createdAt), "MMM d, h:mm a")}</div>
+                        <div className="text-[8px] text-muted-foreground mt-1" style={{ textAlign: reply.isAdmin ? 'right' : 'left' }}>{formatSafeDate(reply.createdAt, "MMM d, h:mm a")}</div>
                       </div>
                     </div>
                   ))}

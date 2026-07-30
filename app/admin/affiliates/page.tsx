@@ -25,6 +25,7 @@ import type { Affiliate } from "@/lib/types"
 import { UserPlus, Check, X, Eye, DollarSign, Users, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { formatSafeDate } from "@/lib/utils"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -484,7 +485,7 @@ export default function AffiliatesPage() {
                       {selectedAffiliate.referralHistory.map((referral, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="font-mono">{referral.orderId}</TableCell>
-                          <TableCell>{format(new Date(referral.date), "MMM d, yyyy")}</TableCell>
+                          <TableCell>{formatSafeDate(referral.date, "MMM d, yyyy")}</TableCell>
                           <TableCell>${referral.amount}</TableCell>
                           <TableCell className="text-green-600">${referral.commission}</TableCell>
                         </TableRow>
@@ -512,7 +513,7 @@ export default function AffiliatesPage() {
                     <TableBody>
                       {selectedAffiliate.payoutHistory.map((payout, idx) => (
                         <TableRow key={idx}>
-                          <TableCell>{format(new Date(payout.date), "MMM d, yyyy")}</TableCell>
+                          <TableCell>{formatSafeDate(payout.date, "MMM d, yyyy")}</TableCell>
                           <TableCell>${payout.amount}</TableCell>
                           <TableCell>
                             <Badge className={payout.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>

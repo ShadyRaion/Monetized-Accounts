@@ -32,6 +32,7 @@ import { useStoreData } from "@/lib/store-data-context"
 import { Star, Plus, Edit, Trash2, Check, X } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { formatSafeDate } from "@/lib/utils"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -220,7 +221,7 @@ export default function ReviewsPage() {
       key: "date",
       label: "Date",
       sortable: true,
-      render: (review) => format(new Date(review.date), "MMM d, yyyy")
+      render: (review) => formatSafeDate(review.date, "MMM d, yyyy")
     },
     {
       key: "status",

@@ -49,6 +49,17 @@ const statusColors: Record<string, string> = {
   rejected: "bg-red-100 text-red-800"
 }
 
+const safeDate = (value: string | undefined | null): Date | null => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const formatSafeDate = (value: string | undefined | null, pattern: string) => {
+  const date = safeDate(value)
+  return date ? format(date, pattern) : ""
+}
+
 export default function OrdersPage() {
   const { user, isLoading } = useAdminAuth()
   const { orders, updateOrderStatus, updateOrderProductDelivery, updateOrder } = useStoreData()
@@ -99,7 +110,10 @@ export default function OrdersPage() {
     
     // Date range filter
     let matchesDate = true
-    const orderDate = new Date(order.date)
+    const orderDate = safeDate(order.date)
+    if (!orderDate) {
+      return false
+    }
     if (startDate) {
       matchesDate = orderDate >= startDate
     }
@@ -122,16 +136,19 @@ export default function OrdersPage() {
 
   const handleExportCSV = () => {
     const headers = ["Order ID", "Customer Email", "Products", "Total", "Verification", "Status", "Date", "Payment Method"]
-    const csvData = filteredOrders.map(order => [
-      order.id,
-      order.customerEmail,
-      order.products.map(p => p.name).join("; "),
-      order.total,
-      order.verificationAdded ? "Yes" : "No",
-      order.status,
-      format(new Date(order.date), "yyyy-MM-dd"),
-      order.paymentMethod
-    ])
+    const csvData = filteredOrders.map(order => {
+      const orderDate = safeDate(order.date)
+      return [
+        order.id,
+        order.customerEmail,
+        order.products.map(p => p.name).join("; "),
+        order.total,
+        order.verificationAdded ? "Yes" : "No",
+        order.status,
+        orderDate ? format(orderDate, "yyyy-MM-dd") : "",
+        order.paymentMethod
+      ]
+    })
 
     const csvContent = [headers, ...csvData].map(row => row.join(",")).join("\n")
     const blob = new Blob([csvContent], { type: "text/csv" })
@@ -203,7 +220,7 @@ export default function OrdersPage() {
       key: "date",
       label: "Date",
       sortable: true,
-      render: (order) => format(new Date(order.date), "MMM d, yyyy")
+      render: (order) => formatSafeDate(order.date, "MMM d, yyyy")
     },
     {
       key: "actions",
@@ -520,7 +537,7 @@ export default function OrdersPage() {
                   <h3 className="font-semibold text-[10px] sm:text-xs mb-1">Payment</h3>
                   <div className="bg-muted rounded p-2 text-[9px] sm:text-xs space-y-0.5">
                     <p className="truncate"><span className="text-muted-foreground">Method:</span> {selectedOrder.paymentMethod}</p>
-                    <p className="text-muted-foreground text-[8px] sm:text-[9px]">{format(new Date(selectedOrder.date), "MMM d, yyyy")}</p>
+                    <p className="text-muted-foreground text-[8px] sm:text-[9px]">{formatSafeDate(selectedOrder.date, "MMM d, yyyy")}</p>
                   </div>
                 </div>
                 <div>
