@@ -112,13 +112,15 @@ interface StoreSettingsContextType {
 
 const StoreSettingsContext = createContext<StoreSettingsContextType | null>(null)
 
-export function StoreSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<StoreSettings>(defaultSettings)
+export function StoreSettingsProvider({ children, initialSettings }: { children: ReactNode; initialSettings?: StoreSettings }) {
+  const [settings, setSettings] = useState<StoreSettings>(initialSettings ?? defaultSettings)
   const [isSaving, setIsSaving] = useState(false)
-  const [isLoaded, setIsLoaded] = useState(false)
-  const settingsRef = useRef<StoreSettings>(defaultSettings)
+  const [isLoaded, setIsLoaded] = useState(!!initialSettings)
+  const settingsRef = useRef<StoreSettings>(initialSettings ?? defaultSettings)
 
   useEffect(() => {
+    if (initialSettings) return
+
     let cancelled = false
     const controller = new AbortController()
     const timeoutId = window.setTimeout(() => controller.abort(), 10000)
