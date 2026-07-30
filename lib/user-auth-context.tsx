@@ -141,23 +141,22 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeSession = async () => {
+      setIsLoading(false)
       try {
 const profileResponse = await apiFetch(apiPath('/auth/profile'), {
           headers: authHeaders()
         })
 
         if (!profileResponse.ok) {
-          throw new Error('Session validation failed')
+          return
         }
 
         const userData = await profileResponse.json()
         if (userData?.role === 'ADMIN') {
-          setIsLoading(false)
           return
         }
 
         setUser(userData)
-        setIsLoading(false)
 
         void Promise.all([
           fetchFavorites(),
@@ -170,11 +169,6 @@ const profileResponse = await apiFetch(apiPath('/auth/profile'), {
         })
       } catch (error) {
         console.warn('Failed to restore session:', error)
-        setUser(null)
-        setFavorites([])
-        setSupportTickets([])
-      } finally {
-        setIsLoading(false)
       }
     }
 
