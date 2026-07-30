@@ -39,7 +39,6 @@ const generateVerificationCode = () => {
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [authReady, setAuthReady] = useState(false)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [pendingEmailChange, setPendingEmailChange] = useState<PendingEmailChange | null>(null)
   const router = useRouter()
@@ -47,27 +46,29 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAdminSession = async () => {
-      // Set as ready immediately - don't block on auth check
       setIsLoading(false)
-      setAuthReady(true)
-      setSessionChecked(true)
-      
+
       try {
         const response = await apiFetch(apiPath('/auth/profile'), {
           headers: authHeaders()
         })
         if (!response.ok) {
+          setUser(null)
           return
         }
+
         const userData = await response.json()
         if (userData?.role !== 'ADMIN') {
           setUser(null)
           return
         }
+
         setUser(userData)
       } catch (error) {
         console.warn('Admin session restore failed:', error)
         setUser(null)
+      } finally {
+        setSessionChecked(true)
       }
     }
 
