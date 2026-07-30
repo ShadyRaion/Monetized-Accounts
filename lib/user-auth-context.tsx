@@ -152,7 +152,8 @@ const profileResponse = await apiFetch(apiPath('/auth/profile'), {
 
         const userData = await profileResponse.json()
         if (userData?.role === 'ADMIN') {
-          throw new Error('Admin sessions are not valid for customer interface')
+          setIsLoading(false)
+          return
         }
 
         setUser(userData)

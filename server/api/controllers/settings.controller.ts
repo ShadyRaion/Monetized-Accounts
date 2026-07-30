@@ -2,6 +2,7 @@ import { type Request, type Response } from 'express';
 import prisma from '../utils/prisma.ts';
 import { broadcastEvent } from '../sse.ts';
 import { storageBucket, getSupabaseClient } from '../utils/supabase.ts';
+import { writeSettingsToFile, readSettingsFromFile } from '../utils/settings-file.ts';
 
 const safeJsonParse = <T>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback
@@ -16,6 +17,17 @@ const safeJsonParse = <T>(value: string | null | undefined, fallback: T): T => {
 export const getSettings = async (req: Request, res: Response) => {
   try {
     const cacheKey = 'settings:singleton'
+    
+    try {
+      const fileSettings = readSettingsFromFile()
+      if (fileSettings) {
+        console.log('[settings] Loaded from cached JSON file')
+        return res.json(fileSettings)
+      }
+    } catch (fileError) {
+      console.warn('[settings] Could not read settings file, falling back to database')
+    }
+    
     try {
       const cached = (await import('../utils/cache.ts')).cacheGet<any>(cacheKey)
       if (cached) return res.json(cached)
@@ -159,6 +171,13 @@ export const updateSettings = async (req: any, res: Response) => {
       faviconUrl: updated.faviconUrl || null,
       paymentSettings: updated.paymentMethods ? JSON.parse(updated.paymentMethods) : undefined,
       faqs: updated.faq ? JSON.parse(updated.faq) : [],
+    }
+
+    try {
+      const settingsFile = await import('../utils/settings-file.ts')
+      await settingsFile.writeSettingsToFile(payload)
+    } catch (fileError) {
+      console.warn('[settings] failed to write settings file', fileError)
     }
 
     try {

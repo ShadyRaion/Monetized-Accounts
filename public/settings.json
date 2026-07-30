@@ -1,0 +1,25 @@
+{
+  "storeName": "Monetized Accounts",
+  "storeEmail": "support@monetizedaccounts.com",
+  "storePhone": "",
+  "storeAddress": "",
+  "storeDiscordLink": "",
+  "storeDescription": "Premium monetized accounts marketplace",
+  "primaryColor": "#FE2C55",
+  "logoUrl": null,
+  "faviconUrl": null,
+  "paymentSettings": {
+    "creditCardEnabled": false,
+    "paypalEnabled": false,
+    "paypalLinkEnabled": false,
+    "paypalLink": "",
+    "paypalApiEnabled": false,
+    "paypalApiUrl": "",
+    "paypalWebhookUrl": "",
+    "stripeApiUrl": "",
+    "stripeWebhookUrl": "",
+    "cryptoEnabled": false,
+    "cryptoCurrencies": []
+  },
+  "faqs": []
+}
