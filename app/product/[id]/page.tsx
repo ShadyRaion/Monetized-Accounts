@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatPrice } from "@/lib/data"
+import { formatFollowers } from "@/lib/utils"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
 import { useStoreData } from "@/lib/store-data-context"
@@ -103,9 +104,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-white'}`}
                   />
                 </button>
-                <div className="text-[#25F4EE] text-xs sm:text-sm font-medium mb-2">{account.type}</div>
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-3 sm:mb-4">
-                  {account.platform}
+                <div className="text-[#25F4EE] text-[10px] sm:text-xs font-medium mb-2">{account.type}</div>
+                <h1 className="text-[1.05rem] sm:text-[1.6rem] md:text-[2.2rem] font-bold text-white mb-3 sm:mb-4">
+                  {account.title || account.platform}
                 </h1>
                 <p className="text-gray-400 text-xs sm:text-base md:text-lg">{account.description}</p>
                 
@@ -116,7 +117,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="bg-gray-50 rounded-lg sm:rounded-2xl p-3 sm:p-4 text-center">
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2" style={{ color: settings.primaryColor }} />
-                  <div className="text-lg sm:text-2xl font-bold text-black">{account.followers}</div>
+                  <div className="text-lg sm:text-2xl font-bold text-black">{formatFollowers(account.followers)}</div>
                   <div className="text-xs sm:text-sm text-gray-500">Followers</div>
                 </div>
                 <div className="bg-gray-50 rounded-lg sm:rounded-2xl p-3 sm:p-4 text-center">

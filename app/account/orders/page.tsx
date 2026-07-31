@@ -39,7 +39,7 @@ export default function OrdersPage() {
   // Clear customer-side new-orders notification when user visits their orders page
   useEffect(() => {
     try {
-      if (clearNewOrders) {
+      if (typeof clearNewOrders === "function") {
         clearNewOrders()
       }
     } catch (e) {

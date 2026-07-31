@@ -12,6 +12,7 @@ export interface Account {
   id: string
   platform: "TikTok" | "YouTube"
   type: string
+  title: string
   followers: string
   followersNum: number
   price: number
@@ -207,6 +208,7 @@ function productToAccount(product: Product): Account {
     id: product.id,
     platform: product.platform,
     type: product.type,
+    title: product.title ?? "",
     followers: product.followers,
     followersNum: parseFollowers(product.followers),
     price: product.price,
@@ -243,6 +245,7 @@ function mapBackendProduct(product: any): Product {
     id: product.id,
     platform: product.platform as "TikTok" | "YouTube",
     type: product.type ?? "",
+    title: product.title ?? "",
     followers: String(product.followers ?? "0"),
     followersNum: Number(product.followers ?? 0),
     price: Number(product.price ?? 0),

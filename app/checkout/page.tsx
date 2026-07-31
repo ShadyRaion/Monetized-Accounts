@@ -19,6 +19,7 @@ import { usePendingAction } from "@/lib/pending-action-context"
 import { useReferral } from "@/lib/referral-context"
 import { apiPath, authHeaders, apiFetch } from "@/lib/api"
 import { formatPrice } from "@/lib/data"
+import { formatFollowers } from "@/lib/utils"
 import { ArrowLeft, Shield, Lock, CreditCard, CheckCircle, Copy, ExternalLink, Clock, Bitcoin, Plus, Minus } from "lucide-react"
 import { toast } from 'sonner'
 
@@ -944,7 +945,7 @@ function CheckoutPageContent() {
                           <div className="text-white text-xs font-bold">{item.account.platform}</div>
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-black">{item.account.followers} Followers</p>
+                          <p className="font-medium text-black">{formatFollowers(item.account.followers)} Followers</p>
                           <p className="text-sm text-gray-500">{item.account.type}</p>
                         </div>
                         <div className="flex items-center gap-2 border border-gray-200 rounded-lg p-1">

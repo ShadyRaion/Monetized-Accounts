@@ -72,6 +72,7 @@ export default function FavoritesPage() {
       id: product.id,
       platform: product.platform as "TikTok" | "YouTube",
       type: product.type as "US TikTok Shop" | "UK TikTok Shop" | "Non-TTS/Affiliate" | "YouTube Aged" | "YouTube Monetized",
+      title: product.title || product.platform || "",
       followers: product.followers,
       followersNum: parseInt(product.followers) || 0,
       price: parseFloat(product.price),

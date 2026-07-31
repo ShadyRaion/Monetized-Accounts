@@ -55,6 +55,7 @@ model Product {
   features           String[]    @default([])
   transferTime       String      @default("Instant")
   type               String      @default("")
+  title              String?
   verificationPrice  Float       @default(0)
   cartItems          CartItem[]
   favorites          Favorite[]

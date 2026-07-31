@@ -4,6 +4,7 @@ export interface Product {
   id: string
   platform: "TikTok" | "YouTube"
   type: string
+  title?: string
   followers: string
   followersNum?: number
   price: number

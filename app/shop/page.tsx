@@ -20,6 +20,24 @@ import { apiPath } from "@/lib/api"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
 import { Users, ShoppingCart, Search, Filter, CheckCircle, AlertCircle, Heart } from "lucide-react"
+
+function PlatformCardIcon({ platform }: { platform: string }) {
+  if (platform === "YouTube") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" aria-label="YouTube" role="img">
+        <rect x="2" y="4" width="20" height="16" rx="5" fill="#FF0000" />
+        <path d="M10 9.5v5l5-2.5-5-2.5Z" fill="white" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" aria-label="TikTok" role="img">
+      <path d="M15.4 3c.3 1.7 1.3 3.1 3.1 3.7v2.5c-1.2 0-2.4-.3-3.5-.9v7.2a4.9 4.9 0 1 1-4.9-4.9c.3 0 .6 0 .8.1v2.7a2.5 2.5 0 1 0 1.7 2.4V3h2.8Z" fill="white" />
+    </svg>
+  )
+}
+
 export default function ShopPage() {
   const [platform, setPlatform] = useState<string>("all")
   const [accountType, setAccountType] = useState<string>("all")
@@ -37,9 +55,12 @@ export default function ShopPage() {
     const fetchProducts = async () => {
       try {
         const url = apiPath('/products')
+        console.log('Shop page: Fetching products from URL:', url)
         const response = await fetch(url)
+        console.log('Shop page: Response status:', response.status)
         if (response.ok) {
           const data = await response.json()
+          console.log('Shop page: Received products:', data)
           setProducts(Array.isArray(data) ? data : [])
         } else {
           console.error('Shop page: Response not OK:', response.status)
@@ -77,8 +98,8 @@ export default function ShopPage() {
           id: p.id,
           platform: (p.platform || "TikTok") as "TikTok" | "YouTube",
           type: (p.type || "Unknown") as any,
+          title: p.title || p.platform || "",
           followers: p.followers,
-          followersFormatted: formatFollowers(p.followers),
           followersNum: Number(p.followers || 0),
           price: Number(p.price || 0),
           badge: p.badge || "",
@@ -107,6 +128,7 @@ export default function ShopPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(a => 
+        a.title.toLowerCase().includes(query) ||
         a.platform.toLowerCase().includes(query) ||
         a.type.toLowerCase().includes(query) ||
         a.description.toLowerCase().includes(query)
@@ -129,14 +151,6 @@ export default function ShopPage() {
     
     return filtered
   }, [accounts, platform, accountType, sortBy, searchQuery])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#FE2C55] border-t-transparent" />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -231,18 +245,22 @@ export default function ShopPage() {
                         {account.badge}
                       </Badge>
                     )}
-                    <div className="text-white font-semibold text-base">{account.type}</div>
-                    <div className="mt-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/80">
-                      <span className={`px-2 py-1 rounded-full text-white ${account.platform === "TikTok" ? "bg-pink-600" : "bg-red-600"}`}>
-                        {account.platform}
-                      </span>
-                      <span>{account.followersFormatted}</span>
+                    <div className="text-white font-bold text-sm sm:text-[15px] leading-tight pr-10">{account.title || account.platform}</div>
+                    <div className="text-[#25F4EE] text-[11px] sm:text-xs mt-1 pr-10">{account.type}</div>
+                    <div className="absolute bottom-2 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 translate-y-1">
+                      <PlatformCardIcon platform={account.platform} />
                     </div>
                   </div>
                   
                   <div className="p-6">
                     <div className="space-y-3 mb-6">
-                      <div className="text-sm text-gray-600">{account.description}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Users className="w-4 h-4" />
+                          <span>Followers</span>
+                        </div>
+                        <span className="font-bold text-black">{formatFollowers(account.followers)}</span>
+                      </div>
                       {account.platform === "TikTok" && account.type !== "Non-TTS/Affiliate" && (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-gray-600">

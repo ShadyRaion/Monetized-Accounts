@@ -76,6 +76,7 @@ export default function ProductsPage() {
     id: "",
     platform: "TikTok" as "TikTok" | "YouTube",
     type: PRODUCT_TYPES[0],
+    title: "",
     followers: "",
     price: 0,
     verificationEnabled: false,
@@ -101,7 +102,8 @@ export default function ProductsPage() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.type.toLowerCase().includes(searchQuery.toLowerCase())
+      product.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.title ?? "").toLowerCase().includes(searchQuery.toLowerCase())
     const matchesPlatform = platformFilter === "all" || product.platform === platformFilter
     const matchesType = typeFilter === "all" || product.type === typeFilter
     const matchesStock = stockFilter === "all" ||
@@ -124,7 +126,7 @@ export default function ProductsPage() {
   }
 
   const handleAddProduct = () => {
-    if (!formData.type || formData.price <= 0) {
+    if (!formData.title || !formData.type || formData.price <= 0) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -134,6 +136,7 @@ export default function ProductsPage() {
       id,
       platform: formData.platform,
       type: formData.type,
+      title: formData.title,
       followers: String(formData.followers || "0"),
       price: formData.price,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
@@ -152,10 +155,15 @@ export default function ProductsPage() {
 
   const handleEditProduct = () => {
     if (!editingProduct) return
+    if (!formData.title || !formData.type || formData.price <= 0) {
+      toast.error("Please fill in all required fields")
+      return
+    }
 
     updateProduct(editingProduct.id, {
       platform: formData.platform,
       type: formData.type,
+      title: formData.title,
       followers: formData.followers,
       price: formData.price,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
@@ -220,6 +228,7 @@ export default function ProductsPage() {
       id: product.id,
       platform: product.platform,
       type: product.type,
+      title: product.title ?? "",
       followers: product.followers,
       price: product.price,
       verificationEnabled: (product.verificationPrice ?? 0) > 0,
@@ -238,6 +247,7 @@ export default function ProductsPage() {
       id: "",
       platform: "TikTok",
       type: PRODUCT_TYPES[0],
+      title: "",
       followers: "",
       price: 0,
       verificationEnabled: false,
@@ -252,6 +262,7 @@ export default function ProductsPage() {
 
   const columns: Column<Product>[] = [
     { key: "id", label: "ID", sortable: true },
+    { key: "title", label: "Title", sortable: true },
   {
   key: "platform",
   label: "Platform",
@@ -484,6 +495,7 @@ interface ProductFormProps {
     id: string
     platform: "TikTok" | "YouTube"
     type: string
+    title: string
     followers: string
     price: number
     verificationEnabled: boolean
@@ -523,6 +535,15 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
               <SelectItem value="YouTube">YouTube</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="title">Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder="e.g. Viral TikTok Shop Account"
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

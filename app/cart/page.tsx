@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useCart } from "@/lib/cart-context"
 import { useUserAuth } from "@/lib/user-auth-context"
 import { formatPrice } from "@/lib/data"
+import { formatFollowers } from "@/lib/utils"
 import { Trash2, ShoppingBag, ArrowRight, Shield, Clock, CheckCircle, User, Plus, Minus } from "lucide-react"
 
 export default function CartPage() {
@@ -73,7 +74,7 @@ export default function CartPage() {
                         >
                           <div className="text-[#25F4EE] text-xs">{item.account.type}</div>
                           <div className="text-white font-bold">{item.account.platform}</div>
-                          <div className="text-white text-sm">{item.account.followers}</div>
+                          <div className="text-white text-sm">{formatFollowers(item.account.followers)}</div>
                         </button>
                         
                         <div className="flex-1">
@@ -82,7 +83,7 @@ export default function CartPage() {
                             onClick={() => router.push(`/product/${item.account.id}`)}
                             className="font-bold text-black text-lg text-left hover:text-[#FE2C55] transition-colors"
                           >
-                            {item.account.platform} - {item.account.followers} Followers
+                            {item.account.platform} - {formatFollowers(item.account.followers)} Followers
                           </button>
                           <p className="text-gray-500 text-sm line-clamp-2">{item.account.description}</p>
                           <div className="flex items-center gap-4 mt-2 text-sm">
@@ -192,7 +193,7 @@ export default function CartPage() {
                     {items.map((item) => (
                       <div key={item.account.id}>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">{item.account.platform} ({item.account.followers}) × {item.quantity}</span>
+                          <span className="text-gray-600">{item.account.platform} ({formatFollowers(item.account.followers)}) × {item.quantity}</span>
                           <span className="font-medium">{formatPrice(item.account.price * item.quantity)}</span>
                         </div>
                         {item.verificationCount > 0 && (

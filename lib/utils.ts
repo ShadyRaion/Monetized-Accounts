@@ -47,32 +47,27 @@ export function formatRevenue(value: number | string): string {
 }
 
 export function formatFollowers(value: number | string): string {
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return '0'
-    if (value >= 1000) {
-      return `${Math.round(value / 100) / 10}K`
-    }
-    return String(value)
-  }
+  const numericValue = typeof value === 'number' ? value : Number(String(value ?? '').replace(/[,\s+]/g, '').replace(/K$/i, '000').replace(/M$/i, '000000'))
 
-  if (typeof value !== 'string') {
+  if (!Number.isFinite(numericValue)) {
     return '0'
   }
 
-  const trimmed = value.trim()
-  if (!trimmed) return '0'
+  const rounded = Math.round(numericValue)
 
-  const normalized = trimmed.replace(/\+/g, '')
-  const match = normalized.match(/^([0-9]*\.?[0-9]+)\s*([KM])?$/i)
-  if (!match) return trimmed
+  if (rounded < 1000) {
+    return String(rounded)
+  }
 
-  const numberPortion = parseFloat(match[1])
-  if (!Number.isFinite(numberPortion)) return trimmed
+  if (rounded < 1000000) {
+    const kValue = rounded / 1000
+    const formatted = Number.isInteger(kValue) ? String(kValue) : kValue.toFixed(1).replace(/\.0$/, '')
+    return `${formatted}K`
+  }
 
-  const suffix = match[2]?.toUpperCase()
-  if (suffix === 'K') return `${numberPortion}K`
-  if (suffix === 'M') return `${numberPortion}M`
-  return String(Math.round(numberPortion))
+  const mValue = rounded / 1000000
+  const formatted = Number.isInteger(mValue) ? String(mValue) : mValue.toFixed(1).replace(/\.0$/, '')
+  return `${formatted}M`
 }
 
 export function getGrowthPercentage(current: number, previous: number): number {

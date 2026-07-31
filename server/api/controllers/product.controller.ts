@@ -95,6 +95,7 @@ function buildProductData(body: any) {
   const {
     platform,
     type,
+    title,
     followers,
     hasVerificationFee,
     verificationPrice,
@@ -126,6 +127,7 @@ function buildProductData(body: any) {
   }
 
   if (price !== undefined) data.price = Number(price || 0)
+  if (title !== undefined) data.title = title || null
   if (description !== undefined) data.description = description || null
   if (features !== undefined) data.features = normalizeFeatures(features)
   if (badge !== undefined) data.badge = badge || null

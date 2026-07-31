@@ -4,10 +4,28 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatPrice } from "@/lib/data"
+import { formatFollowers } from "@/lib/utils"
 import { useCart } from "@/lib/cart-context"
 import { useStoreData } from "@/lib/store-data-context"
 import { Users, ShoppingCart, CheckCircle, AlertCircle, Heart } from "lucide-react"
 import { useUserAuth } from "@/lib/user-auth-context"
+
+function PlatformCardIcon({ platform }: { platform: string }) {
+  if (platform === "YouTube") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" aria-label="YouTube" role="img">
+        <rect x="2" y="4" width="20" height="16" rx="5" fill="#FF0000" />
+        <path d="M10 9.5v5l5-2.5-5-2.5Z" fill="white" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-label="TikTok" role="img">
+      <path d="M15.4 3c.3 1.7 1.3 3.1 3.1 3.7v2.5c-1.2 0-2.4-.3-3.5-.9v7.2a4.9 4.9 0 1 1-4.9-4.9c.3 0 .6 0 .8.1v2.7a2.5 2.5 0 1 0 1.7 2.4V3h2.8Z" fill="white" />
+    </svg>
+  )
+}
 
 export function FeaturedAccounts() {
   const { addToCart, items } = useCart()
@@ -61,8 +79,11 @@ export function FeaturedAccounts() {
                     className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-white'}`}
                   />
                 </button>
-                <div className="text-white font-bold text-base sm:text-lg">{account.platform}</div>
-                <div className="text-[#25F4EE] text-xs sm:text-sm">{account.type}</div>
+                <div className="text-white font-bold text-base sm:text-lg leading-tight pr-10">{account.title || account.platform}</div>
+                <div className="text-[#25F4EE] text-[11px] sm:text-xs mt-1 pr-10">{account.type}</div>
+                <div className="absolute bottom-2 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 translate-y-1">
+                  <PlatformCardIcon platform={account.platform} />
+                </div>
               </div>
               
               <div className="p-3 sm:p-6">
@@ -72,7 +93,7 @@ export function FeaturedAccounts() {
                       <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>Followers</span>
                     </div>
-                    <span className="font-bold text-black text-sm sm:text-base">{account.followers}</span>
+                    <span className="font-bold text-black text-sm sm:text-base">{formatFollowers(account.followers)}</span>
                   </div>
                   {account.platform === "TikTok" && account.type !== "Non-TTS/Affiliate" && (
                     <div className="flex items-center justify-between text-sm sm:text-base">
