@@ -36,7 +36,9 @@ export function Header() {
   useEffect(() => {
     if (!user) return
     if (userPanelOpen) {
-      clearOpenTickets && clearOpenTickets()
+      if (clearOpenTickets) {
+        clearOpenTickets()
+      }
     }
   }, [userPanelOpen, user, clearOpenTickets])
   
@@ -139,7 +141,9 @@ export function Header() {
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setUserPanelOpen(false)
-                          clearNewOrders && clearNewOrders()
+                          if (clearNewOrders) {
+                            clearNewOrders()
+                          }
                         }}
                       >
                         <div className="flex items-center gap-3">

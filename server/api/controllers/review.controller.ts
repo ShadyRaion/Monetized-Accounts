@@ -34,7 +34,7 @@ export const createReview = async (req: any, res: Response) => {
 
     let reviewUserId = userId;
     let order = null;
-    let reviewOrderId = orderId;
+    const reviewOrderId = orderId;
     if (orderId) {
       order = await prisma.order.findUnique({ where: { id: orderId } });
       if (!order) return res.status(404).json({ message: 'Order not found' });

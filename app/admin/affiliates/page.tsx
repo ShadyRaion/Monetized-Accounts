@@ -82,7 +82,7 @@ export default function AffiliatesPage() {
     const affiliate = affiliates.find(a => a.id === affiliateId)
     if (!affiliate) return
 
-    const newValue = !Boolean(affiliate.commissionRateAutoUpgradeEnabled)
+    const newValue = !affiliate.commissionRateAutoUpgradeEnabled
 
     // Optimistically update local state
     const previousAffiliates = affiliates

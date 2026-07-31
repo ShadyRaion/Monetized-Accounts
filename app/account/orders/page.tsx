@@ -38,7 +38,13 @@ export default function OrdersPage() {
 
   // Clear customer-side new-orders notification when user visits their orders page
   useEffect(() => {
-    try { clearNewOrders && clearNewOrders() } catch (e) { /* ignore */ }
+    try {
+      if (clearNewOrders) {
+        clearNewOrders()
+      }
+    } catch (e) {
+      /* ignore */
+    }
   }, [clearNewOrders])
 
   if (isOrderLoading) {

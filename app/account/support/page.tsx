@@ -357,7 +357,7 @@ export default function SupportPage() {
       return word
     }
 
-    for (let word of words) {
+    for (const word of words) {
       if (!currentLine) {
         currentLine = word.length > maxChars ? breakLongWord(word) : word
         continue

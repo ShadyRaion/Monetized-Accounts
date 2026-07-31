@@ -213,7 +213,13 @@ export function StoreSettingsProvider({ children, initialSettings }: { children:
     }
 
     return () => {
-      try { es && es.close() } catch (e) { /* ignore */ }
+      if (es) {
+        try {
+          es.close()
+        } catch (error) {
+          // ignore
+        }
+      }
     }
   }, [])
 
