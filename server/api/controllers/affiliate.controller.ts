@@ -246,7 +246,7 @@ export const getAffiliateDashboard = async (req: Request, res: Response) => {
         }
       }
     });
-    if (!affiliate) return res.status(404).json({ message: 'Not an affiliate' });
+    if (!affiliate) return res.status(204).end()
 
     const enrichedAffiliate = await enrichAffiliateWithMetrics(affiliate);
     res.json(enrichedAffiliate);

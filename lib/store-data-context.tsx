@@ -715,6 +715,13 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
         affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
           .then(async (res) => {
             if (res.ok) {
+              if (res.status === 204) {
+                const data = null
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                globalThis.__affiliateCache = { ts: Date.now(), data }
+                return null
+              }
               const data = await res.json()
               // cache result
               // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -724,7 +731,14 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
             }
             if ([401, 403, 404].includes(res.status)) {
               const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
-              const adminData = adminRes.ok ? await adminRes.json() : null
+              let adminData = null
+              if (adminRes.ok) {
+                if (adminRes.status === 204) {
+                  adminData = null
+                } else {
+                  adminData = await adminRes.json()
+                }
+              }
               // cache admin fallback result (may be null)
               // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               // @ts-ignore
