@@ -87,6 +87,11 @@ const defaultSettings: StoreSettings = {
   faqs: []
 }
 
+export function hasSettingsChanged(current: StoreSettings | null, previous: StoreSettings | null) {
+  if (!current || !previous) return false
+  return JSON.stringify(current) !== JSON.stringify(previous)
+}
+
 const normalizePaymentSettings = (data: any): PaymentSettings => {
   const merged = {
     ...defaultSettings.paymentSettings,

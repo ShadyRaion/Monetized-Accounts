@@ -46,7 +46,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAdminSession = async () => {
-      setIsLoading(false)
+      setIsLoading(true)
 
       try {
         const response = await apiFetch(apiPath('/auth/profile'), {
@@ -68,6 +68,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         console.warn('Admin session restore failed:', error)
         setUser(null)
       } finally {
+        setIsLoading(false)
         setSessionChecked(true)
       }
     }

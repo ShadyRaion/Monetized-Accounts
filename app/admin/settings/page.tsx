@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAdminAuth } from "@/lib/admin-auth-context"
-import { useStoreSettings, type StoreSettings } from "@/lib/store-settings-context"
+import { useStoreSettings, hasSettingsChanged, type StoreSettings } from "@/lib/store-settings-context"
 import { apiPath, authHeaders, apiFetch } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -118,6 +118,7 @@ export default function SettingsPage() {
   const { 
     user, 
     isAuthenticated, 
+    isLoading,
     pendingEmailChange,
     changePassword,
     requestEmailChange,
@@ -173,8 +174,10 @@ export default function SettingsPage() {
   }, [storeSettings.primaryColor])
 
   useEffect(() => {
-    setLastSavedSettings(storeSettings)
-  }, [storeSettings])
+    if (lastSavedSettings === null) {
+      setLastSavedSettings(JSON.parse(JSON.stringify(storeSettings)))
+    }
+  }, [storeSettings, lastSavedSettings])
 
   // Security Settings
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
@@ -310,16 +313,24 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/admin/login")
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/admin/login")
     }
-  }, [isAuthenticated, router])
+  }, [isLoading, isAuthenticated, router])
 
-  if (!isAuthenticated) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FE2C55]" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated || !user) {
     return null
   }
 
-  const hasUnsavedChanges = lastSavedSettings ? JSON.stringify(storeSettings) !== JSON.stringify(lastSavedSettings) : false
+  const hasUnsavedChanges = hasSettingsChanged(storeSettings, lastSavedSettings)
 
   const handleSave = async () => {
     if (!hasUnsavedChanges) {
@@ -330,7 +341,7 @@ export default function SettingsPage() {
     setSaving(true)
     await saveStoreSettings()
     await new Promise(resolve => setTimeout(resolve, 500))
-    setLastSavedSettings(storeSettings)
+    setLastSavedSettings(JSON.parse(JSON.stringify(storeSettings)))
     setSaving(false)
     toast.success("Saved successfully")
   }
