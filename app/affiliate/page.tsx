@@ -995,144 +995,26 @@ function AffiliatePageContent() {
                     Please contact support if you have any questions or would like to reapply with updated information.
                   </p>
                 </div>
-              ) : affiliate?.status === "suspended" && !reapplyWindowExpired ? (
-                <>
-                  <div className="bg-amber-50 rounded-3xl p-8 text-center border-2 border-amber-200 mb-8">
-                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">⚠️</span>
-                    </div>
-                    <h2 className="text-2xl font-bold text-black mb-2">Account Suspended</h2>
-                    <p className="text-gray-600 mb-4">
-                      Your affiliate account has been suspended. Please review and resubmit your application with updated information.
-                    </p>
-                    <p className="text-gray-500 text-sm">
-                      Once resubmitted, our team will review your updated application within 24 hours.
-                    </p>
+              ) : affiliate?.status === "suspended" ? (
+                <div className="bg-amber-50 rounded-3xl p-8 text-center border-2 border-amber-200 mb-8">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">⚠️</span>
                   </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-black text-center mb-4">
-                    Reapply Now
-                  </h2>
-                  <p className="text-gray-600 text-center mb-8">
-                    Update your information and resubmit your application.
+                  <h2 className="text-2xl font-bold text-black mb-2">Account Suspended</h2>
+                  <p className="text-gray-600 mb-4">
+                    Your affiliate account has been suspended. Please review and resubmit your application with updated information.
                   </p>
-                  
-                  <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 bg-gray-50 rounded-2xl p-6 sm:p-8">
-                    {/* Form fields */}
-                    <div>
-                      <Label htmlFor="fullName" className="text-black font-semibold">Full Name</Label>
-                      <Input
-                        id="fullName"
-                        name="fullName"
-                        type="text"
-                        placeholder="John Doe"
-                        value={formData.fullName}
-                        onChange={handleInputChange}
-                        required
-                        className="rounded-lg mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="email" className="text-black font-semibold">Email Address</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="rounded-lg mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-black font-semibold mb-3 block">Are you a content creator?</Label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name="isContentCreator"
-                            value="true"
-                            checked={formData.isContentCreator === true}
-                            onChange={() => setFormData(prev => ({ ...prev, isContentCreator: true }))}
-                            className="mr-2"
-                          />
-                          <span className="text-gray-700">Yes</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name="isContentCreator"
-                            value="false"
-                            checked={formData.isContentCreator === false}
-                            onChange={() => setFormData(prev => ({ ...prev, isContentCreator: false }))}
-                            className="mr-2"
-                          />
-                          <span className="text-gray-700">No</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-black font-semibold mb-3 block">Which platforms do you use to share links?</Label>
-                      <div className="space-y-3">
-                        {[
-                          { id: "instagram", label: "Instagram" },
-                          { id: "tiktok", label: "TikTok" },
-                          { id: "youtube", label: "YouTube" },
-                          { id: "twitter", label: "Twitter/X" },
-                          { id: "twitch", label: "Twitch" },
-                          { id: "other", label: "Other" }
-                        ].map(platform => (
-                          <label key={platform.id} className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              name={`platforms.${platform.id}`}
-                              checked={formData.platforms[platform.id as keyof typeof formData.platforms]}
-                              onChange={handleInputChange}
-                              className="mr-3 w-4 h-4"
-                            />
-                            <span className="text-gray-700">{platform.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                      
-                      {formData.platforms.other && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <Label htmlFor="otherPlatforms" className="text-gray-700 font-medium">Please specify other platforms (e.g., Snapchat, Discord, Threads)</Label>
-                          <Input
-                            id="otherPlatforms"
-                            name="otherPlatforms"
-                            type="text"
-                            placeholder="e.g., Snapchat, Discord, Threads"
-                            value={formData.otherPlatforms}
-                            onChange={handleInputChange}
-                            className="rounded-lg mt-2"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <Button 
-                      type="submit"
-                      className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-full text-lg py-6 mt-6"
-                    >
-                      Resubmit Application
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
-                  </form>
-                </>
-              ) : affiliate?.status === "rejected" || affiliate?.status === "suspended" ? (
+                  <p className="text-gray-500 text-sm">
+                    Once resubmitted, our team will review your updated application within 24 hours.
+                  </p>
+                </div>
+              ) : affiliate?.status === "rejected" && reapplyWindowExpired ? (
                 <>
                   <div className="bg-red-50 rounded-3xl p-8 text-center border-2 border-red-200 mb-8">
                     <CheckCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-black mb-2">Application Declined</h2>
                     <p className="text-gray-600 mb-4">
-                      Unfortunately, your application doesn&apos;t meet our current requirements.
-                    </p>
-                    <p className="text-gray-500 text-sm">
-                      Please contact support if you have any questions or would like to reapply with updated information.
+                      Your rejection period has ended. You can now update your information and reapply.
                     </p>
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold text-black text-center mb-4">
