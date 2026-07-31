@@ -603,6 +603,10 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
   const { user: customerUser, isLoading: isCustomerAuthLoading } = useUserAuth()
   const { user: adminUser, isLoading: isAdminAuthLoading } = useAdminAuth()
 
+  // Simple in-memory cache to avoid hitting /affiliate/me repeatedly
+  // during rapid re-renders or transient auth state changes.
+  // Key is module-level to persist across component instances.
+
   // Initialize with empty state - we'll load from backend on mount
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -698,16 +702,34 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
       // Browsers will log a 404 for unauthenticated/non-affiliate requests —
       // harmless but noisy. Only fetch when the customer/admin auth state
       // has settled and at least one user context exists.
+      // Throttle affiliate fetches: reuse recent result when available.
       let affiliatesPromise: Promise<any> | null
-      if (!isCustomerAuthLoading && !customerUser && !adminUser) {
+      const now = Date.now()
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - module-scoped cache defined below
+      if (typeof globalThis.__affiliateCache === 'object' && globalThis.__affiliateCache.ts && (now - globalThis.__affiliateCache.ts) < 15000) {
+        affiliatesPromise = Promise.resolve(globalThis.__affiliateCache.data)
+      } else if (!isCustomerAuthLoading && !customerUser && !adminUser) {
         affiliatesPromise = Promise.resolve(null)
       } else {
         affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
           .then(async (res) => {
-            if (res.ok) return await res.json()
+            if (res.ok) {
+              const data = await res.json()
+              // cache result
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore
+              globalThis.__affiliateCache = { ts: Date.now(), data }
+              return data
+            }
             if ([401, 403, 404].includes(res.status)) {
               const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
-              return adminRes.ok ? await adminRes.json() : null
+              const adminData = adminRes.ok ? await adminRes.json() : null
+              // cache admin fallback result (may be null)
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore
+              globalThis.__affiliateCache = { ts: Date.now(), data: adminData }
+              return adminData
             }
             return null
           })
