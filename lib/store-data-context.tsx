@@ -666,37 +666,50 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
         .then(async (res) => res.ok ? await res.json() : null)
         .catch((err) => { console.warn("Failed to load products:", err); return null })
 
-      const ordersPromise = apiFetch(orderPath, { headers: orderHeaders })
-        .then(async (res) => {
-          if (res.ok) return await res.json()
-          if (!isAdminSession && [401, 403, 404].includes(res.status)) {
-            const fallback = await apiFetch(apiPath("/orders"), { headers: authHeaders(undefined, true) })
-            return fallback.ok ? await fallback.json() : null
-          }
-          const text = await res.text().catch(() => '')
-          console.warn('[store] load orders failed', res.status, res.statusText, text)
-          return null
-        })
-        .catch((err) => { console.warn("Failed to load orders:", err); return null })
+      // Only fetch orders if there's an authenticated customer or admin session.
+      let ordersPromise: Promise<any> | null = Promise.resolve(null)
+      const isCustomerSession = Boolean(customerUser)
+      if (isCustomerSession || isAdminSession) {
+        ordersPromise = apiFetch(orderPath, { headers: orderHeaders })
+          .then(async (res) => {
+            if (res.ok) return await res.json()
+            if (!isAdminSession && [401, 403, 404].includes(res.status)) {
+              const fallback = await apiFetch(apiPath("/orders"), { headers: authHeaders(undefined, true) })
+              return fallback.ok ? await fallback.json() : null
+            }
+            const text = await res.text().catch(() => '')
+            console.warn('[store] load orders failed', res.status, res.statusText, text)
+            return null
+          })
+          .catch((err) => { console.warn("Failed to load orders:", err); return null })
+      }
 
       const reviewsPromise = apiFetch(apiPath("/reviews"), { headers })
         .then(async (res) => res.ok ? await res.json() : null)
         .catch((err) => { console.warn("Failed to load reviews:", err); return null })
 
-      const ticketsPromise = refreshTickets().catch((err) => {
-        console.warn("Failed to load tickets:", err)
-      })
-
-      const subscribersPromise = apiFetch(apiPath("/admin/subscribers"), { headers: authHeaders(undefined, true) })
-        .then(async (res) => {
-          if (res.ok) return await res.json()
-          if ([404, 401, 403].includes(res.status)) {
-            const fallback = await apiFetch(apiPath("/subscribers"), { headers })
-            return fallback.ok ? await fallback.json() : null
-          }
-          return null
+      // Only refresh tickets for authenticated sessions
+      let ticketsPromise: Promise<any> = Promise.resolve(null)
+      if (isCustomerSession || isAdminSession) {
+        ticketsPromise = refreshTickets().catch((err) => {
+          console.warn("Failed to load tickets:", err)
         })
-        .catch((err) => { console.warn("Failed to load subscribers:", err); return null })
+      }
+
+      // Subscribers/admin endpoints are admin-only; skip when not admin.
+      let subscribersPromise: Promise<any> | null = Promise.resolve(null)
+      if (isAdminSession) {
+        subscribersPromise = apiFetch(apiPath("/admin/subscribers"), { headers: authHeaders(undefined, true) })
+          .then(async (res) => {
+            if (res.ok) return await res.json()
+            if ([404, 401, 403].includes(res.status)) {
+              const fallback = await apiFetch(apiPath("/subscribers"), { headers })
+              return fallback.ok ? await fallback.json() : null
+            }
+            return null
+          })
+          .catch((err) => { console.warn("Failed to load subscribers:", err); return null })
+      }
 
       // Avoid calling /affiliate/me when there is no authenticated user.
       // Browsers will log a 404 for unauthenticated/non-affiliate requests —
@@ -750,16 +763,19 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
           .catch((err) => { console.warn("Failed to load affiliates:", err); return null })
       }
 
-      const customersPromise = apiFetch(apiPath("/admin/customers"), { headers: authHeaders(undefined, true) })
-        .then(async (res) => {
-          if (res.ok) return await res.json()
-          if (res.status === 404) {
-            const usersRes = await apiFetch(apiPath("/admin/users"), { headers: authHeaders(undefined, true) })
-            return usersRes.ok ? await usersRes.json() : null
-          }
-          return null
-        })
-        .catch((err) => { console.warn("Failed to load customers:", err); return null })
+      let customersPromise: Promise<any> | null = Promise.resolve(null)
+      if (isAdminSession) {
+        customersPromise = apiFetch(apiPath("/admin/customers"), { headers: authHeaders(undefined, true) })
+          .then(async (res) => {
+            if (res.ok) return await res.json()
+            if (res.status === 404) {
+              const usersRes = await apiFetch(apiPath("/admin/users"), { headers: authHeaders(undefined, true) })
+              return usersRes.ok ? await usersRes.json() : null
+            }
+            return null
+          })
+          .catch((err) => { console.warn("Failed to load customers:", err); return null })
+      }
 
       const [productsData, ordersData, reviewsData, subscribersData, affiliatesData, customersData] = await Promise.all([
         productsPromise,
