@@ -95,6 +95,7 @@ function AffiliatePageContent() {
   const [pendingAffiliateSubmit, setPendingAffiliateSubmit] = useState(false)
   const [isReapplying, setIsReapplying] = useState(false)
   const [hasScrolledToPending, setHasScrolledToPending] = useState(false)
+  const [isAffiliateLoading, setIsAffiliateLoading] = useState(true)
   const formRef = useRef<HTMLFormElement>(null)
   const pendingSectionRef = useRef<HTMLDivElement>(null)
   const { pendingAction, savePendingAction, clearPendingAction } = usePendingAction()
@@ -123,7 +124,17 @@ function AffiliatePageContent() {
     let isActive = true
 
     const loadAffiliateFromBackend = async () => {
-      if (typeof window === "undefined" || !user || !isAuthenticated || isLoading) return
+      if (typeof window === "undefined") return
+
+      if (!user || !isAuthenticated) {
+        if (isActive) {
+          setResolvedAffiliate(undefined)
+          setIsAffiliateLoading(false)
+        }
+        return
+      }
+
+      setIsAffiliateLoading(true)
 
       try {
         const response = await apiFetch(apiPath("/affiliate/me"), {
@@ -139,7 +150,7 @@ function AffiliatePageContent() {
             userId: data.userId ?? data.id ?? user.id,
             name: data.user?.name ?? user.name ?? "",
             email: data.user?.email ?? user.email ?? "",
-            referralCode: data.affiliateCode ?? data.referralCode ?? "",
+            referralCode: (data.affiliateCode ?? data.referralCode ?? "").toString().slice(0, 5).toUpperCase(),
             commissionRate: normalizeAffiliateCommissionRate(data.commissionRate),
             commissionRateAutoUpgradeEnabled: data.commissionRateAutoUpgradeEnabled !== false,
             status: normalizeAffiliateStatus(data.status),
@@ -191,6 +202,10 @@ function AffiliatePageContent() {
         }
       } catch (err) {
         console.warn("Failed to load affiliate from backend:", err)
+      } finally {
+        if (isActive) {
+          setIsAffiliateLoading(false)
+        }
       }
     }
 
@@ -467,10 +482,26 @@ function AffiliatePageContent() {
     : getNextTierCommissionGoal(affiliate?.nextTierGoal ?? 10)
   const autoUpgradeEnabled = affiliate?.commissionRateAutoUpgradeEnabled !== false
   const canShowMaxTier = affiliate?.nextTierGoal === null && autoUpgradeEnabled
+  const affiliateReapplyDeadlineMs = 30 * 24 * 60 * 60 * 1000
+  const reapplyWindowExpired = affiliate
+    ? Date.now() - new Date(affiliate.lastActive).getTime() > affiliateReapplyDeadlineMs
+    : true
 
   // Use totalEarnings directly from affiliate object (already calculated and stored)
   // Do NOT recalculate based on current commission rate as it changes past earnings
   const totalEarnings = affiliate?.totalEarnings || 0
+
+  if (isLoading || isAffiliateLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="flex min-h-[60vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FE2C55]" />
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   // Render affiliate dashboard if accepted
   if (affiliate?.status === "active") {
@@ -942,7 +973,7 @@ function AffiliatePageContent() {
         <section className="py-20" ref={pendingSectionRef}>
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto">
-              {affiliate?.status === "pending" && submitted && !isReapplying ? (
+              {affiliate?.status === "pending" ? (
                 <div className="bg-[#25F4EE]/10 rounded-3xl p-8 text-center">
                   <CheckCircle className="w-16 h-16 text-[#25F4EE] mx-auto mb-4" />
                   <h2 className="text-2xl font-bold text-black mb-2">Application Pending</h2>
@@ -953,7 +984,18 @@ function AffiliatePageContent() {
                     Your referral code will be generated once your application is approved.
                   </p>
                 </div>
-              ) : affiliate?.status === "suspended" ? (
+              ) : affiliate?.status === "rejected" && !reapplyWindowExpired ? (
+                <div className="bg-red-50 rounded-3xl p-8 text-center border-2 border-red-200 mb-8">
+                  <CheckCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-black mb-2">Application Declined</h2>
+                  <p className="text-gray-600 mb-4">
+                    Unfortunately, your application doesn&apos;t meet our current requirements.
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Please contact support if you have any questions or would like to reapply with updated information.
+                  </p>
+                </div>
+              ) : affiliate?.status === "suspended" && !reapplyWindowExpired ? (
                 <>
                   <div className="bg-amber-50 rounded-3xl p-8 text-center border-2 border-amber-200 mb-8">
                     <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1081,7 +1123,7 @@ function AffiliatePageContent() {
                     </Button>
                   </form>
                 </>
-              ) : affiliate?.status === "rejected" ? (
+              ) : affiliate?.status === "rejected" || affiliate?.status === "suspended" ? (
                 <>
                   <div className="bg-red-50 rounded-3xl p-8 text-center border-2 border-red-200 mb-8">
                     <CheckCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />

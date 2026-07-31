@@ -30,6 +30,21 @@ const getNextTierGoal = (commissionRate: number, autoUpgradeEnabled: boolean) =>
   return null
 }
 
+const generateAffiliateCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+const normalizeAffiliateCode = (value?: string | null) => {
+  if (!value) return ''
+  const cleaned = String(value).trim().replace(/[^A-Z0-9]/gi, '').slice(0, 5).toUpperCase()
+  return cleaned.length === 5 ? cleaned : cleaned.padEnd(5, 'X')
+}
+
 const shouldCommissionAutoUpgrade = (commissionRate: number, purchaseCount: number, existingRate?: number) => {
   if (commissionRate < 20 || commissionRate > 40) return false
 
@@ -58,10 +73,25 @@ export async function ensureAffiliateForUser(userId: string, payoutMethod: strin
   const existing = await prisma.affiliate.findUnique({ where: { userId } });
   if (existing) {
     const existingStatus = String(existing.status || '').trim().toLowerCase();
-      // debug: existing affiliate found (removed noisy logging)
+    const shouldReapply = existingStatus === 'suspended' || existingStatus === 'rejected'
+    const shouldResetAfterThirtyDays = shouldReapply && Date.now() - new Date(existing.updatedAt).getTime() > 30 * 24 * 60 * 60 * 1000
 
-    // If affiliate is suspended or rejected, allow them to reapply by resetting status to Pending
-    if (existingStatus === 'suspended' || existingStatus === 'rejected') {
+    if (shouldReapply && shouldResetAfterThirtyDays) {
+      const updated = await prisma.affiliate.update({
+        where: { userId },
+        data: {
+          status: 'Pending',
+          updatedAt: new Date(),
+          socialMediaPlatforms: data?.platforms || existing.socialMediaPlatforms || [],
+          isContentCreator: data?.isContentCreator !== undefined ? data.isContentCreator : existing.isContentCreator,
+          affiliateCode: normalizeAffiliateCode(existing.affiliateCode) || generateAffiliateCode(),
+        },
+        include: { user: true }
+      });
+      return { affiliate: updated, created: false, reapplied: true };
+    }
+
+    if (shouldReapply) {
       const updated = await prisma.affiliate.update({
         where: { userId },
         data: {
@@ -72,16 +102,17 @@ export async function ensureAffiliateForUser(userId: string, payoutMethod: strin
         },
         include: { user: true }
       });
-        // debug: affiliate reapplied, updated status
       return { affiliate: updated, created: false, reapplied: true };
     }
     return { affiliate: existing, created: false };
   }
 
+  const affiliateCode = generateAffiliateCode()
   const affiliate = await prisma.affiliate.create({
-    data: { 
-      userId, 
-      status: 'Pending', 
+    data: {
+      userId,
+      status: 'Pending',
+      affiliateCode,
       payoutMethod,
       socialMediaPlatforms: data?.platforms || [],
       isContentCreator: data?.isContentCreator || false

@@ -438,6 +438,13 @@ function mapBackendTicket(ticket: any): Ticket {
   }
 }
 
+function normalizeReferralCode(value?: string | null) {
+  const raw = String(value ?? "").trim().replace(/[^A-Z0-9]/gi, "").slice(0, 5).toUpperCase()
+  if (raw.length === 5) return raw
+  if (!raw) return ""
+  return raw.padEnd(5, "X")
+}
+
 function mapBackendAffiliate(affiliate: any): Affiliate {
   const user = affiliate.user ?? {}
   const purchases = Array.isArray(affiliate.purchases) ? affiliate.purchases : []
@@ -472,7 +479,7 @@ function mapBackendAffiliate(affiliate: any): Affiliate {
     userId: affiliate.userId ?? affiliate.id ?? "",
     name: user.name ?? "",
     email: user.email ?? "",
-    referralCode: affiliate.affiliateCode ?? "",
+    referralCode: normalizeReferralCode(affiliate.affiliateCode),
     commissionRate: normalizedRate,
     commissionRateAutoUpgradeEnabled: autoUpgradeEnabled,
     status: affiliate.status === "Accepted" ? "active" : affiliate.status === "Pending" ? "pending" : affiliate.status?.toLowerCase() ?? "pending",
@@ -1740,9 +1747,9 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
 
   // Generate unique referral code
   const generateReferralCode = useCallback(() => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 5; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length))
     }
     return code
