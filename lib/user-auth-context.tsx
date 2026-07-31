@@ -141,18 +141,21 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeSession = async () => {
-      setIsLoading(false)
+      setIsLoading(true)
+
       try {
-const profileResponse = await apiFetch(apiPath('/auth/profile'), {
+        const profileResponse = await apiFetch(apiPath('/auth/profile'), {
           headers: authHeaders()
         })
 
         if (!profileResponse.ok) {
+          setUser(null)
           return
         }
 
         const userData = await profileResponse.json()
         if (!userData || userData?.role === 'ADMIN') {
+          setUser(null)
           return
         }
 
@@ -169,6 +172,9 @@ const profileResponse = await apiFetch(apiPath('/auth/profile'), {
         })
       } catch (error) {
         console.warn('Failed to restore session:', error)
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
     }
 
