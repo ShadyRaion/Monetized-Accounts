@@ -694,16 +694,25 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
         })
         .catch((err) => { console.warn("Failed to load subscribers:", err); return null })
 
-      const affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
-        .then(async (res) => {
-          if (res.ok) return await res.json()
-          if ([401, 403, 404].includes(res.status)) {
-            const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
-            return adminRes.ok ? await adminRes.json() : null
-          }
-          return null
-        })
-        .catch((err) => { console.warn("Failed to load affiliates:", err); return null })
+      // Avoid calling /affiliate/me when there is no authenticated user.
+      // Browsers will log a 404 for unauthenticated/non-affiliate requests —
+      // harmless but noisy. Only fetch when the customer/admin auth state
+      // has settled and at least one user context exists.
+      let affiliatesPromise: Promise<any> | null
+      if (!isCustomerAuthLoading && !customerUser && !adminUser) {
+        affiliatesPromise = Promise.resolve(null)
+      } else {
+        affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
+          .then(async (res) => {
+            if (res.ok) return await res.json()
+            if ([401, 403, 404].includes(res.status)) {
+              const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
+              return adminRes.ok ? await adminRes.json() : null
+            }
+            return null
+          })
+          .catch((err) => { console.warn("Failed to load affiliates:", err); return null })
+      }
 
       const customersPromise = apiFetch(apiPath("/admin/customers"), { headers: authHeaders(undefined, true) })
         .then(async (res) => {
