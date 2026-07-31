@@ -38,7 +38,7 @@ const routeDefinitions: RouteDefinition[] = [
   { methods: ['POST'], path: '/auth/register', handler: authCtrl.register },
   { methods: ['POST'], path: '/auth/login', handler: authCtrl.login },
   { methods: ['POST'], path: '/auth/logout', handler: authCtrl.logout },
-  { methods: ['GET'], path: '/auth/profile', middleware: [authenticate], handler: authCtrl.getProfile },
+  { methods: ['GET'], path: '/auth/profile', middleware: [optionalAuthenticate], handler: authCtrl.getProfile },
   { methods: ['PUT'], path: '/auth/profile', middleware: [authenticate], handler: authCtrl.updateProfile },
   { methods: ['PUT'], path: '/auth/password', middleware: [authenticate], handler: authCtrl.changePassword },
 
@@ -67,7 +67,7 @@ const routeDefinitions: RouteDefinition[] = [
   { methods: ['POST'], path: '/tickets/admin/reset', middleware: [authenticate, requireAdmin], handler: ticketCtrl.adminResetMessaging },
 
   { methods: ['POST'], path: '/affiliate/apply', middleware: [authenticate], handler: affiliateCtrl.applyAffiliate },
-  { methods: ['GET'], path: '/affiliate/me', middleware: [authenticate], handler: affiliateCtrl.getAffiliateDashboard },
+  { methods: ['GET'], path: '/affiliate/me', middleware: [optionalAuthenticate], handler: affiliateCtrl.getAffiliateDashboard },
   { methods: ['PUT'], path: '/affiliate/me', middleware: [authenticate], handler: affiliateCtrl.updateMyAffiliate },
   { methods: ['PUT'], path: '/affiliate/me/update', middleware: [authenticate], handler: affiliateCtrl.updateMyAffiliate },
   { methods: ['GET'], path: '/affiliate', middleware: [authenticate, requireAdmin], handler: affiliateCtrl.adminListAffiliates },

@@ -152,7 +152,7 @@ const profileResponse = await apiFetch(apiPath('/auth/profile'), {
         }
 
         const userData = await profileResponse.json()
-        if (userData?.role === 'ADMIN') {
+        if (!userData || userData?.role === 'ADMIN') {
           return
         }
 

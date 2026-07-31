@@ -229,9 +229,13 @@ async function enrichAffiliateWithMetrics(affiliate: any) {
 
 export const getAffiliateDashboard = async (req: Request, res: Response) => {
   try {
-    const userId = String((req as any).user?.id);
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(200).json(null);
+    }
+
     const affiliate = await prisma.affiliate.findUnique({
-      where: { userId },
+      where: { userId: String(userId) },
       include: {
         user: true,
         purchases: {
@@ -246,7 +250,7 @@ export const getAffiliateDashboard = async (req: Request, res: Response) => {
         }
       }
     });
-    if (!affiliate) return res.status(204).end()
+    if (!affiliate) return res.status(200).json(null)
 
     const enrichedAffiliate = await enrichAffiliateWithMetrics(affiliate);
     res.json(enrichedAffiliate);
