@@ -714,11 +714,8 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
           .catch((err) => { console.warn("Failed to load subscribers:", err); return null })
       }
 
-      // Avoid calling /affiliate/me when there is no authenticated user.
-      // Browsers will log a 404 for unauthenticated/non-affiliate requests —
-      // harmless but noisy. Only fetch when the customer/admin auth state
-      // has settled and at least one user context exists.
-      // Throttle affiliate fetches: reuse recent result when available.
+      // Fetch the correct affiliate endpoint for the current auth context.
+      // Admins need the full affiliate list, while customers only need their own record.
       let affiliatesPromise: Promise<any> | null
       const now = Date.now()
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -727,6 +724,20 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
         affiliatesPromise = Promise.resolve(globalThis.__affiliateCache.data)
       } else if (!isCustomerAuthLoading && !customerUser && !adminUser) {
         affiliatesPromise = Promise.resolve(null)
+      } else if (adminUser) {
+        affiliatesPromise = apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
+          .then(async (res) => {
+            if (!res.ok) {
+              if ([401, 403, 404].includes(res.status)) return null
+              return null
+            }
+            const data = res.status === 204 ? null : await res.json()
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            globalThis.__affiliateCache = { ts: Date.now(), data }
+            return data
+          })
+          .catch((err) => { console.warn("Failed to load affiliate list:", err); return null })
       } else {
         affiliatesPromise = apiFetch(apiPath("/affiliate/me"), { headers })
           .then(async (res) => {
@@ -739,31 +750,14 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
                 return null
               }
               const data = await res.json()
-              // cache result
               // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               // @ts-ignore
               globalThis.__affiliateCache = { ts: Date.now(), data }
               return data
             }
-            if ([401, 403, 404].includes(res.status)) {
-              const adminRes = await apiFetch(apiPath("/affiliate"), { headers: authHeaders(undefined, true) })
-              let adminData = null
-              if (adminRes.ok) {
-                if (adminRes.status === 204) {
-                  adminData = null
-                } else {
-                  adminData = await adminRes.json()
-                }
-              }
-              // cache admin fallback result (may be null)
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore
-              globalThis.__affiliateCache = { ts: Date.now(), data: adminData }
-              return adminData
-            }
             return null
           })
-          .catch((err) => { console.warn("Failed to load affiliates:", err); return null })
+          .catch((err) => { console.warn("Failed to load customer affiliate:", err); return null })
       }
 
       let customersPromise: Promise<any> | null = Promise.resolve(null)
