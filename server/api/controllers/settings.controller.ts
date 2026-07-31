@@ -17,40 +17,15 @@ const safeJsonParse = <T>(value: string | null | undefined, fallback: T): T => {
 export const getSettings = async (req: Request, res: Response) => {
   try {
     const cacheKey = 'settings:singleton'
-    
-    try {
-      const fileSettings = readSettingsFromFile()
-      if (fileSettings) {
-        console.log('[settings] Loaded from cached JSON file')
-        return res.json(fileSettings)
-      }
-    } catch (fileError) {
-      console.warn('[settings] Could not read settings file, falling back to database')
-    }
-    
+
     try {
       const cached = (await import('../utils/cache.ts')).cacheGet<any>(cacheKey)
       if (cached) return res.json(cached)
     } catch (err) { /* ignore cache errors */ }
-    const s = await prisma.settings.findUnique({ where: { id: 1 } });
-    if (!s) {
-      return res.status(404).json({ message: 'Settings not found' });
-    }
 
-    res.json({
-      storeName: s.siteName,
-      storeDescription: s.description,
-      primaryColor: s.themeColor,
-      storePhone: s.phone || '',
-      storeEmail: s.email || '',
-      storeDiscordLink: s.discordLink || '',
-      logoUrl: s.logoUrl || null,
-      faviconUrl: s.faviconUrl || null,
-      paymentSettings: safeJsonParse<any>(s.paymentMethods, undefined),
-      faqs: safeJsonParse<any[]>(s.faq, []),
-    });
-    try {
-      (await import('../utils/cache.ts')).cacheSet(cacheKey, {
+    const s = await prisma.settings.findUnique({ where: { id: 1 } });
+    if (s) {
+      const payload = {
         storeName: s.siteName,
         storeDescription: s.description,
         primaryColor: s.themeColor,
@@ -61,8 +36,26 @@ export const getSettings = async (req: Request, res: Response) => {
         faviconUrl: s.faviconUrl || null,
         paymentSettings: safeJsonParse<any>(s.paymentMethods, undefined),
         faqs: safeJsonParse<any[]>(s.faq, []),
-      }, 10000)
-    } catch (err) { /* ignore cache errors */ }
+      }
+
+      try {
+        (await import('../utils/cache.ts')).cacheSet(cacheKey, payload, 10000)
+      } catch (err) { /* ignore cache errors */ }
+
+      return res.json(payload)
+    }
+
+    try {
+      const fileSettings = readSettingsFromFile()
+      if (fileSettings) {
+        console.log('[settings] Loaded from cached JSON file as fallback')
+        return res.json(fileSettings)
+      }
+    } catch (fileError) {
+      console.warn('[settings] Could not read settings file fallback', fileError)
+    }
+
+    return res.status(404).json({ message: 'Settings not found' });
   } catch (error) {
     console.error('[settings] getSettings error', error)
     res.status(500).json({ message: 'Internal server error' });

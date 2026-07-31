@@ -124,8 +124,6 @@ export function StoreSettingsProvider({ children, initialSettings }: { children:
   const settingsRef = useRef<StoreSettings>(initialSettings ?? defaultSettings)
 
   useEffect(() => {
-    if (initialSettings) return
-
     let cancelled = false
     const controller = new AbortController()
     const timeoutId = window.setTimeout(() => controller.abort(), 10000)
@@ -161,7 +159,9 @@ export function StoreSettingsProvider({ children, initialSettings }: { children:
           console.error('Failed to load store settings from API', error)
         }
 
-        if (!cancelled) {
+        if (!cancelled && initialSettings) {
+          setSettings(initialSettings)
+        } else if (!cancelled) {
           setSettings(defaultSettings)
         }
       } finally {
@@ -178,7 +178,7 @@ export function StoreSettingsProvider({ children, initialSettings }: { children:
       window.clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [])
+  }, [initialSettings])
 
   useEffect(() => {
     settingsRef.current = settings
