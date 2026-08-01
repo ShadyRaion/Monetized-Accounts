@@ -325,6 +325,7 @@ const response = await apiFetch(apiPath('/auth/password'), {
 
   const addToFavorites = async (productId: string) => {
     if (!user) return
+    setFavorites(prev => prev.includes(productId) ? prev : [...prev, productId])
     try {
       const response = await apiFetch(apiPath('/favorites'), {
         method: 'POST',
@@ -333,16 +334,18 @@ const response = await apiFetch(apiPath('/auth/password'), {
       })
       if (!response.ok) {
         console.warn('Failed to add favorite')
+        setFavorites(prev => prev.filter(id => id !== productId))
         return
       }
-      setFavorites(prev => prev.includes(productId) ? prev : [...prev, productId])
     } catch (error) {
+      setFavorites(prev => prev.filter(id => id !== productId))
       console.error('Error adding favorite', error)
     }
   }
 
   const removeFromFavorites = async (productId: string) => {
     if (!user) return
+    setFavorites(prev => prev.filter(id => id !== productId))
     try {
       const response = await apiFetch(apiPath(`/favorites/${productId}`), {
         method: 'DELETE',
@@ -350,10 +353,11 @@ const response = await apiFetch(apiPath('/auth/password'), {
       })
       if (!response.ok) {
         console.warn('Failed to remove favorite')
+        setFavorites(prev => prev.includes(productId) ? prev : [...prev, productId])
         return
       }
-      setFavorites(prev => prev.filter(id => id !== productId))
     } catch (error) {
+      setFavorites(prev => prev.includes(productId) ? prev : [...prev, productId])
       console.error('Error removing favorite', error)
     }
   }

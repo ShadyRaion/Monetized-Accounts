@@ -19,6 +19,7 @@ import { formatFollowers } from "@/lib/utils"
 import { apiPath } from "@/lib/api"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
+import { useUserAuth } from "@/lib/user-auth-context"
 import { Users, ShoppingCart, Search, Filter, CheckCircle, AlertCircle, Heart } from "lucide-react"
 
 function PlatformCardIcon({ platform }: { platform: string }) {
@@ -48,7 +49,10 @@ export default function ShopPage() {
   const [justAdded, setJustAdded] = useState<string | null>(null)
   
   const { addToCart, items } = useCart()
+  const { isAuthenticated, addToFavorites, removeFromFavorites, isFavorite, redirectToLogin } = useUserAuth()
   const { settings } = useStoreSettings()
+  const cartItemIds = useMemo(() => new Set(items.map(item => item.account.id)), [items])
+  const isInCart = (id: string) => cartItemIds.has(id)
   
   // Fetch products directly from API
   useEffect(() => {
@@ -76,8 +80,7 @@ export default function ShopPage() {
 
   const handleAddToCart = async (account: any) => {
     setJustAdded(account.id)
-    await addToCart(account)
-    // Reset the animation state after 1.5 seconds
+    void addToCart(account)
     setTimeout(() => {
       setJustAdded(null)
     }, 1500)
@@ -281,26 +284,41 @@ export default function ShopPage() {
                           <span className="text-2xl font-bold text-black">{formatPrice(account.price)}</span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Link href={`/product/${account.id}`} className="flex-1">
-                            <Button variant="outline" className="w-full rounded-full border-gray-200">
-                              View Details
-                            </Button>
-                          </Link>
-                        </div>
-                        <Button 
-                          className="rounded-full text-white px-3 py-1.5 h-auto text-sm"
-                          style={{ 
-                            backgroundColor: !account.inStock ? '#9CA3AF' : justAdded === account.id ? '#25F4EE' : settings.primaryColor,
-                            color: justAdded === account.id ? 'black' : 'white',
-                            cursor: !account.inStock ? 'not-allowed' : 'pointer'
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          className={`rounded-full border border-gray-200 p-2 transition-colors ${isFavorite(account.id) ? 'bg-[#FE2C55]/10 text-[#FE2C55]' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (!isAuthenticated) {
+                              redirectToLogin()
+                              return
+                            }
+                            if (isFavorite(account.id)) {
+                              void removeFromFavorites(account.id)
+                            } else {
+                              void addToFavorites(account.id)
+                            }
                           }}
-                          onClick={() => account.inStock && handleAddToCart(account)}
-                          disabled={!account.inStock}
+                          aria-label={isFavorite(account.id) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          {!account.inStock ? 'Out of Stock' : justAdded === account.id ? <CheckCircle className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-                        </Button>
+                          <Heart className={`w-4 h-4 ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-gray-500'}`} />
+                        </button>
+
+                        <Link href={`/product/${account.id}`} className="flex-1">
+                          <Button variant="outline" className="w-full rounded-full border-gray-200 text-sm py-2">
+                            View Details
+                          </Button>
+                        </Link>
+
+                        <button
+                          type="button"
+                          className={`rounded-full px-3 py-1.5 h-auto text-sm transition-colors ${isInCart(account.id) ? 'bg-[#25F4EE] text-black' : 'bg-[#FE2C55] text-white hover:bg-[#FE2C55]/90'}`}
+                          onClick={() => account.inStock && handleAddToCart(account)}
+                          disabled={!account.inStock || isInCart(account.id)}
+                        >
+                          {!account.inStock ? 'Out of Stock' : isInCart(account.id) ? <CheckCircle className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
                   </div>

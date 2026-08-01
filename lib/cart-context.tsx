@@ -139,6 +139,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const previousItems = items
+    const optimisticItems = previousItems.some(item => item.account.id === account.id)
+      ? previousItems.map(item => item.account.id === account.id ? { ...item, quantity: item.quantity + 1 } : item)
+      : [...previousItems, { account, quantity: 1, addVerification: false, verificationCount: 0 }]
+
+    setItems(optimisticItems)
     setLoading(true)
     try {
       const response = await apiFetch('/cart', {
@@ -156,16 +162,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (existing) {
           return prev.map(item =>
             item.account.id === account.id
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, cartId: savedItem.id, quantity: item.quantity, addVerification: item.addVerification, verificationCount: item.verificationCount }
               : item
           )
         }
         return [...prev, { cartId: savedItem.id, account, quantity: savedItem.quantity || 1, addVerification: false, verificationCount: 0 }]
       })
+    } catch (error) {
+      setItems(previousItems)
+      console.error('Error adding item to cart:', error)
     } finally {
       setLoading(false)
     }
-  }, [persistGuestCart, user])
+  }, [persistGuestCart, user, items])
 
   const removeFromCart = useCallback(async (accountId: string) => {
     if (!user) {
