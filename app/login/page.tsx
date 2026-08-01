@@ -104,6 +104,16 @@ function LoginPageContent() {
     const initializeGoogle = () => {
       const google = (window as any).google
       if (!google || !google.accounts || !google.accounts.id) return
+      console.log('Google login init:', {
+        origin: window.location.origin,
+        clientId: googleClientId,
+        googleLoaded: !!google.accounts.id,
+        alreadyInitialized: !!(window as any).__googleIdentityInitialized
+      })
+      if ((window as any).__googleIdentityInitialized) {
+        setIsGoogleReady(true)
+        return
+      }
 
       google.accounts.id.initialize({
         client_id: googleClientId,
@@ -111,10 +121,13 @@ function LoginPageContent() {
         auto_select: false,
         cancel_on_tap_outside: true,
       })
+      ;(window as any).__googleIdentityInitialized = true
       setIsGoogleReady(true)
     }
 
-    if ((window as any).google?.accounts?.id) {
+    const isGoogleLoaded = () => !!(window as any).google?.accounts?.id
+
+    if (isGoogleLoaded()) {
       initializeGoogle()
       return
     }
@@ -122,7 +135,7 @@ function LoginPageContent() {
     const existingScript = document.getElementById('google-client-script')
     if (existingScript) {
       const timer = window.setInterval(() => {
-        if ((window as any).google?.accounts?.id) {
+        if (isGoogleLoaded()) {
           initializeGoogle()
           window.clearInterval(timer)
         }
@@ -459,6 +472,17 @@ function LoginPageContent() {
                     ) : (
                       "Create Account"
                     )}
+                  </Button>
+                  <div className="mt-3 text-center text-sm text-gray-500">or</div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full mt-3 flex items-center justify-center gap-2"
+                    onClick={handleGoogleLogin}
+                    disabled={isSubmitting || !isGoogleReady || !googleClientId}
+                  >
+                    <GoogleIcon className="w-4 h-4" />
+                    {isGoogleReady && googleClientId ? "Continue with Google" : "Google login not available"}
                   </Button>
                 </form>
               </TabsContent>
