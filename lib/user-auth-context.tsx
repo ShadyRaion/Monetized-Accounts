@@ -36,6 +36,7 @@ interface UserAuthContextType {
   favorites: string[]
   supportTickets: SupportTicket[]
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>
   register: (email: string, password: string, name: string, referralCode?: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   updateProfile: (data: { name?: string; email?: string }) => Promise<{ success: boolean; error?: string }>
@@ -183,7 +184,7 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-const response = await apiFetch(apiPath('/auth/login'), {
+      const response = await apiFetch(apiPath('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -220,6 +221,45 @@ const response = await apiFetch(apiPath('/auth/login'), {
     }
   }
 
+  const loginWithGoogle = async (idToken: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await apiFetch(apiPath('/auth/login/google'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.user?.role === 'ADMIN') {
+          return { success: false, error: 'Admin credentials are not valid for customer login' }
+        }
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          createdAt: data.user.createdAt || new Date().toISOString(),
+          referralCode: data.user.referralCode
+        }
+        setUser(userData)
+        const [favoriteIds, tickets] = await Promise.all([
+          fetchFavorites(),
+          fetchSupportTickets(undefined, userData.id)
+        ])
+
+        setFavorites(favoriteIds)
+        setSupportTickets(tickets)
+
+        return { success: true }
+      }
+
+      const errorData = await response.json()
+      return { success: false, error: errorData.message || "Google login failed" }
+    } catch (error: any) {
+      return { success: false, error: "Google login failed: " + error.message }
+    }
+  }
+
   const register = async (email: string, password: string, name: string, referralCode?: string): Promise<{ success: boolean; error?: string; userId?: string }> => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
@@ -235,7 +275,7 @@ const response = await apiFetch(apiPath('/auth/login'), {
     }
 
     try {
-const response = await apiFetch(apiPath('/auth/register'), {
+      const response = await apiFetch(apiPath('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name, referralCode })
@@ -467,6 +507,7 @@ const response = await apiFetch(apiPath('/auth/password'), {
       favorites,
       supportTickets,
       login,
+      loginWithGoogle,
       register,
       logout,
       updateProfile,

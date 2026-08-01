@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import prisma from '../utils/prisma.ts';
 
 const SESSION_COOKIE = 'monetized_session';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 const createSession = async (userId: string, role: string) => {
   const rawToken = crypto.randomBytes(32).toString('hex');
@@ -114,6 +115,68 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const verifyGoogleIdToken = async (idToken: string) => {
+  if (!idToken) return null;
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+  if (!response.ok) return null;
+  const tokenData = await response.json();
+  if (tokenData.aud !== GOOGLE_CLIENT_ID) return null;
+  if (tokenData.email_verified !== 'true' && tokenData.email_verified !== true) return null;
+  return tokenData;
+};
+
+export const loginWithGoogle = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: 'Google ID token is required' });
+    }
+
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ message: 'Google authentication is not configured' });
+    }
+
+    const tokenData: any = await verifyGoogleIdToken(idToken);
+    if (!tokenData || !tokenData.email) {
+      return res.status(401).json({ message: 'Invalid Google token' });
+    }
+
+    const normalizedEmail = tokenData.email.toLowerCase();
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (user && user.isBanned) {
+      return res.status(403).json({ message: 'Your account has been banned' });
+    }
+
+    if (!user) {
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+      user = await prisma.user.create({
+        data: {
+          name: tokenData.name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          passwordHash,
+        },
+      });
+    }
+
+    const session = await createSession(user.id, user.role);
+    setSessionCookie(res, session.rawToken, session.expiresAt);
+
+    res.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        referralCode: user.referralCode ?? undefined
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({ message: 'Google login failed' });
   }
 };
 
