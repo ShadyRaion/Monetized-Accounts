@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,6 @@ function LoginPageContent() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [prefilledEmail, setPrefilledEmail] = useState("")
-  const [isGoogleReady, setIsGoogleReady] = useState(false)
   const { pendingAction, clearPendingAction } = usePendingAction()
   const hasPendingAffiliateForm = pendingAction?.type === 'affiliate'
   const hasPendingContactForm = pendingAction?.type === 'contact'
@@ -42,13 +41,12 @@ function LoginPageContent() {
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("")
   const [referralCode, setReferralCode] = useState("")
   
-  const { login, loginWithGoogle, register, returnUrl, clearReturnUrl } = useUserAuth()
+  const { login, register, returnUrl, clearReturnUrl } = useUserAuth()
   const { settings } = useStoreSettings()
   const { addCustomer, affiliates, setAffiliates } = useStoreData()
   const { referralCode: urlReferralCode } = useReferral()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
   
   // Check for prefilled email and pending affiliate form on mount
   useEffect(() => {
@@ -63,98 +61,6 @@ function LoginPageContent() {
       setReferralCode(urlReferralCode)
     }
   }, [searchParams, urlReferralCode, pendingAction])
-
-  const handleGoogleCallback = useCallback(async (response: any) => {
-    if (!response?.credential) {
-      setError("Google login did not return a valid credential")
-      setIsSubmitting(false)
-      return
-    }
-
-    const result = await loginWithGoogle(response.credential)
-    if (result.success) {
-      const redirect = getPostAuthRedirect({
-        pendingAction,
-        hasPendingAffiliateForm,
-        hasPendingContactForm,
-        returnUrl
-      })
-
-      if (redirect.clearPendingAction) {
-        clearPendingAction()
-      }
-
-      if (redirect.target === returnUrl || redirect.target === "/") {
-        clearReturnUrl()
-      }
-
-      router.push(redirect.target)
-      return
-    }
-
-    setError(result.error || "Google login failed")
-    setIsSubmitting(false)
-  }, [loginWithGoogle, pendingAction, hasPendingAffiliateForm, hasPendingContactForm, returnUrl, clearPendingAction, clearReturnUrl, router])
-
-  useEffect(() => {
-    if (!googleClientId) {
-      return
-    }
-
-    const initializeGoogle = () => {
-      const google = (window as any).google
-      if (!google || !google.accounts || !google.accounts.id) return
-      console.log('Google login init:', {
-        origin: window.location.origin,
-        clientId: googleClientId,
-        googleLoaded: !!google.accounts.id,
-        alreadyInitialized: !!(window as any).__googleIdentityInitialized
-      })
-      if ((window as any).__googleIdentityInitialized) {
-        setIsGoogleReady(true)
-        return
-      }
-
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCallback,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      })
-      ;(window as any).__googleIdentityInitialized = true
-      setIsGoogleReady(true)
-    }
-
-    const isGoogleLoaded = () => !!(window as any).google?.accounts?.id
-
-    if (isGoogleLoaded()) {
-      initializeGoogle()
-      return
-    }
-
-    const existingScript = document.getElementById('google-client-script')
-    if (existingScript) {
-      const timer = window.setInterval(() => {
-        if (isGoogleLoaded()) {
-          initializeGoogle()
-          window.clearInterval(timer)
-        }
-      }, 100)
-      return () => window.clearInterval(timer)
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.id = 'google-client-script'
-    script.onload = initializeGoogle
-    document.body.appendChild(script)
-
-    return () => {
-      script.onload = null
-    }
-  }, [googleClientId, handleGoogleCallback])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,25 +91,6 @@ function LoginPageContent() {
     }
     
     setIsSubmitting(false)
-  }
-
-  const handleGoogleLogin = async () => {
-    setError("")
-    setIsSubmitting(true)
-
-    const google = (window as any).google
-    if (!google || !google.accounts || !google.accounts.id || !isGoogleReady) {
-      setError("Google auth is not ready yet")
-      setIsSubmitting(false)
-      return
-    }
-
-    google.accounts.id.prompt((notification: any) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setError("Google login was not completed")
-        setIsSubmitting(false)
-      }
-    })
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -367,14 +254,14 @@ function LoginPageContent() {
                   </Button>
                   <div className="mt-3 text-center text-sm text-gray-500">or</div>
                   <Button
-                    type="button"
+                    asChild
                     variant="secondary"
                     className="w-full mt-3 flex items-center justify-center gap-2"
-                    onClick={handleGoogleLogin}
-                    disabled={isSubmitting || !isGoogleReady || !googleClientId}
                   >
-                    <GoogleIcon className="w-4 h-4" />
-                    {isGoogleReady && googleClientId ? "Continue with Google" : "Google login not available"}
+                    <a href="/api/auth/login/google">
+                      <GoogleIcon className="w-4 h-4" />
+                      Continue with Google
+                    </a>
                   </Button>
                 </form>
               </TabsContent>
@@ -475,14 +362,14 @@ function LoginPageContent() {
                   </Button>
                   <div className="mt-3 text-center text-sm text-gray-500">or</div>
                   <Button
-                    type="button"
+                    asChild
                     variant="secondary"
                     className="w-full mt-3 flex items-center justify-center gap-2"
-                    onClick={handleGoogleLogin}
-                    disabled={isSubmitting || !isGoogleReady || !googleClientId}
                   >
-                    <GoogleIcon className="w-4 h-4" />
-                    {isGoogleReady && googleClientId ? "Continue with Google" : "Google login not available"}
+                    <a href="/api/auth/login/google">
+                      <GoogleIcon className="w-4 h-4" />
+                      Continue with Google
+                    </a>
                   </Button>
                 </form>
               </TabsContent>
