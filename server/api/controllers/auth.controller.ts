@@ -5,6 +5,8 @@ import prisma from '../utils/prisma.ts';
 
 const SESSION_COOKIE = 'monetized_session';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_OAUTH_REDIRECT = process.env.GOOGLE_OAUTH_REDIRECT || '';
 
 const createSession = async (userId: string, role: string) => {
   const rawToken = crypto.randomBytes(32).toString('hex');
@@ -177,6 +179,99 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Google login error:', error);
     res.status(500).json({ message: 'Google login failed' });
+  }
+};
+
+export const startGoogleOAuth = async (req: Request, res: Response) => {
+  try {
+    if (!GOOGLE_CLIENT_ID) return res.status(500).json({ message: 'Google authentication is not configured' });
+
+    const host = (req.headers && ((req.headers as any).host || (req.headers as any)['x-forwarded-host'])) || 'localhost:3000'
+    const proto = (req.headers && ((req.headers as any)['x-forwarded-proto'] || (req.headers as any)['x-forwarded-protocol'])) || (req as any).protocol || 'http'
+    const redirectUri = GOOGLE_OAUTH_REDIRECT || `${proto}://${host}/api/auth/login/google/callback`;
+
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'consent'
+    });
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    res.setHeader?.('Location', url)
+    res.status?.(302)
+    res.end?.()
+  } catch (error) {
+    console.error('startGoogleOAuth error', error);
+    res.status(500).json({ message: 'Failed to start Google OAuth' });
+  }
+};
+
+export const handleGoogleOAuthCallback = async (req: Request, res: Response) => {
+  try {
+    const code = (req.query as any).code;
+    if (!code) return res.status(400).json({ message: 'Missing code' });
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return res.status(500).json({ message: 'Google server-side credentials not configured' });
+
+    const host = (req.headers && ((req.headers as any).host || (req.headers as any)['x-forwarded-host'])) || 'localhost:3000'
+    const proto = (req.headers && ((req.headers as any)['x-forwarded-proto'] || (req.headers as any)['x-forwarded-protocol'])) || (req as any).protocol || 'http'
+    const redirectUri = GOOGLE_OAUTH_REDIRECT || `${proto}://${host}/api/auth/login/google/callback`;
+
+    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: String(code),
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code'
+      })
+    });
+
+    if (!tokenResp.ok) {
+      const txt = await tokenResp.text();
+      console.error('Token exchange failed', txt);
+      return res.status(502).json({ message: 'Failed to exchange code for tokens' });
+    }
+
+    const tokenData: any = await tokenResp.json();
+    const idToken = tokenData.id_token;
+    if (!idToken) return res.status(502).json({ message: 'No id_token returned from Google' });
+
+    const verified = await verifyGoogleIdToken(idToken);
+    if (!verified || !verified.email) return res.status(401).json({ message: 'Invalid Google token' });
+
+    const normalizedEmail = verified.email.toLowerCase();
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (user && user.isBanned) {
+      return res.status(403).json({ message: 'Your account has been banned' });
+    }
+
+    if (!user) {
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+      user = await prisma.user.create({
+        data: {
+          name: verified.name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          passwordHash,
+        },
+      });
+    }
+
+    const session = await createSession(user.id, user.role);
+    setSessionCookie(res, session.rawToken, session.expiresAt);
+
+    // Redirect back to the app root (could be enhanced to use state param)
+    res.setHeader?.('Location', '/')
+    res.status?.(302)
+    res.end?.()
+  } catch (error) {
+    console.error('handleGoogleOAuthCallback error', error);
+    res.status(500).json({ message: 'Google OAuth callback failed' });
   }
 };
 

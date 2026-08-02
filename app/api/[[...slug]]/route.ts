@@ -36,7 +36,10 @@ const routeDefinitions: RouteDefinition[] = [
   { methods: ['GET'], path: '/health', handler: async (req, res) => res.json({ status: 'OK', message: 'API is running' }) },
 
   { methods: ['POST'], path: '/auth/register', handler: authCtrl.register },
+  { methods: ['GET'], path: '/auth/login/google', handler: authCtrl.startGoogleOAuth },
+  { methods: ['GET'], path: '/auth/login/google/callback', handler: authCtrl.handleGoogleOAuthCallback },
   { methods: ['POST'], path: '/auth/login', handler: authCtrl.login },
+  { methods: ['POST'], path: '/auth/login/google', handler: authCtrl.loginWithGoogle },
   { methods: ['POST'], path: '/auth/logout', handler: authCtrl.logout },
   { methods: ['GET'], path: '/auth/profile', middleware: [optionalAuthenticate], handler: authCtrl.getProfile },
   { methods: ['PUT'], path: '/auth/profile', middleware: [authenticate], handler: authCtrl.updateProfile },
