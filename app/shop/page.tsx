@@ -189,11 +189,11 @@ export default function ShopPage() {
               
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 w-full">
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                  <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 shrink-0" />
                   <span className="text-[10px] sm:text-sm text-gray-500 hidden sm:inline">Filter:</span>
                 </div>
                 <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger className="w-20 sm:w-[140px] rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
+                  <SelectTrigger className="w-20 sm:w-35 rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
                     <SelectValue placeholder="Platform" />
                   </SelectTrigger>
                   <SelectContent>
@@ -204,7 +204,7 @@ export default function ShopPage() {
                 </Select>
 
                 <Select value={accountType} onValueChange={setAccountType}>
-                  <SelectTrigger className="w-24 sm:w-[180px] rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
+                  <SelectTrigger className="w-24 sm:w-45 rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -221,7 +221,7 @@ export default function ShopPage() {
                 </Select>
                 
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[150px] rounded-full">
+                  <SelectTrigger className="w-37.5 rounded-full">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>

@@ -2,6 +2,39 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readGuestCart, writeGuestCart, mergeGuestCartItems, GUEST_CART_TTL_MS } from '../lib/guest-cart'
 
+function createLocalStorageMock() {
+  let store = new Map<string, string>()
+
+  return {
+    getItem(key: string) {
+      return store.has(key) ? store.get(key) ?? null : null
+    },
+    setItem(key: string, value: string) {
+      store.set(key, String(value))
+    },
+    removeItem(key: string) {
+      store.delete(key)
+    },
+    clear() {
+      store.clear()
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null
+    },
+    get length() {
+      return store.size
+    }
+  } as unknown as Storage
+}
+
+if (typeof globalThis.localStorage === 'undefined') {
+  ;(globalThis as any).localStorage = createLocalStorageMock()
+}
+
+test.beforeEach(() => {
+  globalThis.localStorage.clear()
+})
+
 test('readGuestCart returns empty array for expired guest carts', () => {
   const key = 'guest_cart_session_test'
   const expiredValue = JSON.stringify({

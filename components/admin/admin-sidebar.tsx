@@ -49,23 +49,24 @@ export function AdminSidebar({ isCollapsed, onCollapsedChange }: AdminSidebarPro
   const hasUnreadMessages = tickets.some(t => t.status === "open" || t.status === "opened")
   const showUpdateIndicator = hasOpenTickets
 
+  const adminBasePath = "/ks7q"
   const navItems: NavItem[] = [
-    { label: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
-    { label: "Products", href: "/admin/products", icon: <Package className="h-5 w-5" /> },
-    { label: "Orders", href: "/admin/orders", icon: <ShoppingCart className="h-5 w-5" />, badge: hasNewOrders ? 'unread' : undefined },
-    { label: "Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-5 w-5" /> },
-    { label: "Customers", href: "/admin/customers", icon: <Users className="h-5 w-5" />, badge: hasNewCustomers ? 'unread' : undefined },
-    { label: "Messages", href: "/admin/messages", icon: <MessageSquare className="h-5 w-5" />, badge: showUpdateIndicator ? "unread" : undefined },
-    { label: "Reviews", href: "/admin/reviews", icon: <Star className="h-5 w-5" />, badge: hasNewReviews ? 'unread' : undefined },
-    { label: "FAQ", href: "/admin/faq", icon: <MessageSquare className="h-5 w-5" /> },
-    { label: "Affiliates", href: "/admin/affiliates", icon: <UserPlus className="h-5 w-5" /> },
-    { label: "Subscribers", href: "/admin/subscribers", icon: <Mail className="h-5 w-5" />, badge: hasNewSubscribers ? 'unread' : undefined },
-    { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
+    { label: "Dashboard", href: adminBasePath, icon: <LayoutDashboard className="h-5 w-5" /> },
+    { label: "Products", href: `${adminBasePath}/products`, icon: <Package className="h-5 w-5" /> },
+    { label: "Orders", href: `${adminBasePath}/orders`, icon: <ShoppingCart className="h-5 w-5" />, badge: hasNewOrders ? 'unread' : undefined },
+    { label: "Analytics", href: `${adminBasePath}/analytics`, icon: <BarChart3 className="h-5 w-5" /> },
+    { label: "Customers", href: `${adminBasePath}/customers`, icon: <Users className="h-5 w-5" />, badge: hasNewCustomers ? 'unread' : undefined },
+    { label: "Messages", href: `${adminBasePath}/messages`, icon: <MessageSquare className="h-5 w-5" />, badge: showUpdateIndicator ? "unread" : undefined },
+    { label: "Reviews", href: `${adminBasePath}/reviews`, icon: <Star className="h-5 w-5" />, badge: hasNewReviews ? 'unread' : undefined },
+    { label: "FAQ", href: `${adminBasePath}/faq`, icon: <MessageSquare className="h-5 w-5" /> },
+    { label: "Affiliates", href: `${adminBasePath}/affiliates`, icon: <UserPlus className="h-5 w-5" /> },
+    { label: "Subscribers", href: `${adminBasePath}/subscribers`, icon: <Mail className="h-5 w-5" />, badge: hasNewSubscribers ? 'unread' : undefined },
+    { label: "Settings", href: `${adminBasePath}/settings`, icon: <Settings className="h-5 w-5" /> },
   ]
 
   const isActive = (href: string) => {
-    if (href === "/admin") {
-      return pathname === "/admin"
+    if (href === adminBasePath) {
+      return pathname === adminBasePath
     }
     return pathname?.startsWith(href)
   }

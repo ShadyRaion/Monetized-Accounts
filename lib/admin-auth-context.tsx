@@ -83,15 +83,14 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const normalizedPathname = pathname?.replace(/\/$/, "") ?? ""
-    const isLoginPage = normalizedPathname === "/admin/login"
-    const isAdminArea = normalizedPathname.startsWith("/admin") && !isLoginPage
+    const adminBasePath = "/ks7q"
+    const isLoginPage = normalizedPathname === `${adminBasePath}/login`
+    const isAdminArea = normalizedPathname.startsWith(adminBasePath) && !isLoginPage
 
     if (!user && isAdminArea) {
-      // Save the intended path before redirecting to login
-      router.replace("/admin/login")
+      router.replace(`${adminBasePath}/login`)
     } else if (user && isLoginPage) {
-      // After successful login, redirect to intended path or dashboard
-      router.replace("/admin")
+      router.replace(adminBasePath)
     }
   }, [user, sessionChecked, pathname, router])
 
@@ -130,7 +129,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     void apiFetch(apiPath('/auth/logout'), { method: 'POST' })
     setUser(null)
     setPendingEmailChange(null)
-    router.replace("/admin/login")
+    router.replace("/ks7q/login")
   }
 
   const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {

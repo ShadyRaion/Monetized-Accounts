@@ -1,7 +1,9 @@
+import type { ProductType } from "@/lib/types"
+
 export interface Account {
   id: string
   platform: "TikTok" | "YouTube"
-  type: "US TikTok Shop" | "UK TikTok Shop" | "Non-TTS/Affiliate" | "YouTube Aged" | "YouTube Monetized"
+  type: ProductType
   followers: string
   followersNum: number
   price: number

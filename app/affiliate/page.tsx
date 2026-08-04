@@ -571,7 +571,7 @@ function AffiliatePageContent() {
           {/* Referral Link */}
           <section className="py-8 border-b">
             <div className="container mx-auto px-4">
-              <div className="bg-gradient-to-r from-[#FE2C55]/10 to-[#25F4EE]/10 rounded-2xl p-6">
+              <div className="bg-linear-to-r from-[#FE2C55]/10 to-[#25F4EE]/10 rounded-2xl p-6">
                 <h2 className="font-bold text-lg mb-3">Your Referral Link</h2>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 bg-white rounded-xl p-4 border-2 border-dashed border-gray-200 font-mono text-sm break-all">
@@ -598,7 +598,7 @@ function AffiliatePageContent() {
               <h2 className="text-2xl font-bold mb-6">Your Stats</h2>
               
               {/* Commission Banner */}
-              <div className="bg-gradient-to-r from-[#FE2C55]/10 to-pink-500/10 border border-[#FE2C55]/30 rounded-2xl p-4 mb-6 flex gap-3">
+              <div className="bg-linear-to-r from-[#FE2C55]/10 to-pink-500/10 border border-[#FE2C55]/30 rounded-2xl p-4 mb-6 flex gap-3">
                 {canShowMaxTier ? (
                   <>
                     <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
@@ -668,7 +668,7 @@ function AffiliatePageContent() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-[#FE2C55] to-[#FE2C55]/80 text-white">
+                <Card className="bg-linear-to-br from-[#FE2C55] to-[#FE2C55]/80 text-white">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                       <DollarSign className="w-4 h-4" />
@@ -701,7 +701,7 @@ function AffiliatePageContent() {
 
                 {affiliate?.paymentMethod ? (
                   <div className="space-y-3">
-                    <div className="p-4 bg-gradient-to-r from-[#FE2C55]/5 to-transparent rounded-xl border border-[#FE2C55]/20">
+                    <div className="p-4 bg-linear-to-r from-[#FE2C55]/5 to-transparent rounded-xl border border-[#FE2C55]/20">
                       <p className="text-sm text-gray-600 mb-1">Current Payment Method</p>
                       {affiliate.paymentMethod.type === "paypal" ? (
                         <p className="font-semibold text-gray-900">PayPal: {affiliate.paymentMethod.paypalLink}</p>
@@ -781,7 +781,7 @@ function AffiliatePageContent() {
               <h2 className="text-2xl font-bold mb-6">Your Stats</h2>
               
               {/* Commission Banner */}
-              <div className="bg-gradient-to-r from-[#FE2C55]/10 to-pink-500/10 border border-[#FE2C55]/30 rounded-2xl p-4 mb-6 flex gap-3">
+              <div className="bg-linear-to-r from-[#FE2C55]/10 to-pink-500/10 border border-[#FE2C55]/30 rounded-2xl p-4 mb-6 flex gap-3">
                 {canShowMaxTier ? (
                   <>
                     <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
@@ -851,7 +851,7 @@ function AffiliatePageContent() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-[#FE2C55] to-[#FE2C55]/80 text-white">
+                <Card className="bg-linear-to-br from-[#FE2C55] to-[#FE2C55]/80 text-white">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                       <DollarSign className="w-4 h-4" />
@@ -979,7 +979,7 @@ function AffiliatePageContent() {
               
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-6 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold">
+                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center shrink-0 text-white font-bold">
                     1
                   </div>
                   <div>
@@ -989,7 +989,7 @@ function AffiliatePageContent() {
                 </div>
                 
                 <div className="bg-white rounded-2xl p-6 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold">
+                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center shrink-0 text-white font-bold">
                     2
                   </div>
                   <div>
@@ -999,7 +999,7 @@ function AffiliatePageContent() {
                 </div>
                 
                 <div className="bg-white rounded-2xl p-6 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold">
+                  <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center shrink-0 text-white font-bold">
                     3
                   </div>
                   <div>

@@ -1,13 +1,24 @@
 // Type definitions for backend integration
 
+export type ProductType =
+  | "Monetized Tiktok"
+  | "US Shop Affiliate"
+  | "UK Shop Affiliate"
+  | "US TikTok Shop"
+  | "UK TikTok Shop"
+  | "Non-TTS/Affiliate"
+  | "YouTube Aged"
+  | "YouTube Monetized"
+
 export interface Product {
   id: string
   platform: "TikTok" | "YouTube"
-  type: string
+  type: ProductType
   title?: string
   followers: string
   followersNum?: number
   price: number
+  originalPrice?: number
   badge?: string
   badgeColor?: string
   description: string

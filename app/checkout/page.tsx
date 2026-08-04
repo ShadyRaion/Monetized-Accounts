@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/cart-context"
@@ -20,7 +21,7 @@ import { useReferral } from "@/lib/referral-context"
 import { apiPath, authHeaders, apiFetch } from "@/lib/api"
 import { formatPrice } from "@/lib/data"
 import { formatFollowers } from "@/lib/utils"
-import { ArrowLeft, Shield, Lock, CreditCard, CheckCircle, Copy, ExternalLink, Clock, Bitcoin, Plus, Minus } from "lucide-react"
+import { ArrowLeft, Shield, Lock, CreditCard, CheckCircle, Copy, ExternalLink, Clock, Bitcoin, Plus, Minus, AlertTriangle } from "lucide-react"
 import { toast } from 'sonner'
 
 function CheckoutPageContent() {
@@ -32,7 +33,7 @@ function CheckoutPageContent() {
   const { addOrder, addOrUpdateCustomer } = useStoreData()
   const { user, isAuthenticated, isLoading, redirectToLogin } = useUserAuth()
   const { referralCode } = useReferral()
-  const { savePendingAction, clearPendingAction } = usePendingAction()
+  const { pendingAction, savePendingAction, clearPendingAction } = usePendingAction()
   const [fallbackBuyNowItem, setFallbackBuyNowItem] = useState<typeof buyNowItem>(null)
   const [isBuyNowLoading, setIsBuyNowLoading] = useState(isBuyNow)
 
@@ -60,17 +61,31 @@ function CheckoutPageContent() {
       return
     }
 
+    const savedCheckoutState = typeof window !== 'undefined'
+      ? window.sessionStorage.getItem(CHECKOUT_PENDING_STORAGE_KEY)
+      : null
+
+    if (savedCheckoutState) {
+      try {
+        const parsed = JSON.parse(savedCheckoutState)
+        if (parsed?.buyNowItem) {
+          setFallbackBuyNowItem(normalizeBuyNowItem(parsed.buyNowItem))
+        }
+        if (parsed?.pendingCheckoutItems) {
+          setPendingCheckoutItems(parsed.pendingCheckoutItems)
+        }
+      } catch (error) {
+        console.warn('Failed to restore buy now item from storage', error)
+      }
+    }
+
     setIsBuyNowLoading(false)
   }, [isBuyNow, buyNowItem, setBuyNowItem])
 
   const effectiveBuyNowItem = buyNowItem || fallbackBuyNowItem
-  const getPendingCheckoutItems = () => {
-    return []
-  }
+  const [pendingCheckoutItems, setPendingCheckoutItems] = useState<PendingCheckoutItem[]>([])
 
   type PendingCheckoutItem = { account: any; quantity: number; verificationCount: number }
-  const getPendingCheckoutItemsTyped = (): PendingCheckoutItem[] => getPendingCheckoutItems()
-  const pendingCheckoutItems = useMemo<PendingCheckoutItem[]>(() => getPendingCheckoutItemsTyped(), [])
 
   const checkoutItems = useMemo<any[]>(() => {
     if (isBuyNow) {
@@ -92,12 +107,38 @@ function CheckoutPageContent() {
   const [paymentMethod, setPaymentMethod] = useState<string>("")
   const [selectedCrypto, setSelectedCrypto] = useState<string>("")
   const [selectedNetwork, setSelectedNetwork] = useState<string>("")
+  const [showPaymentWarning, setShowPaymentWarning] = useState(false)
   const [showPendingConfirmation, setShowPendingConfirmation] = useState(false)
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!showPendingConfirmation || typeof window === 'undefined') return
+
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      document.documentElement.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const timer = window.setTimeout(scrollToTop, 80)
+    return () => window.clearTimeout(timer)
+  }, [showPendingConfirmation])
   const [copied, setCopied] = useState(false)
   const hasMounted = useRef(false)
   const pendingOrderIdRef = useRef<string | null>(null)
   const pendingOrderCancelRef = useRef(false)
+  const CHECKOUT_PENDING_STORAGE_KEY = 'checkout_pending_state_v1'
+
+  const [formData, setFormData] = useState({
+    email: user?.email || "",
+    firstName: user?.name?.split(' ')[0] || "",
+    lastName: user?.name?.split(' ').slice(1).join(' ') || "",
+    cardNumber: "",
+    expiry: "",
+    cvc: "",
+    agreeToTerms: false
+  })
+  const [pendingCheckoutAction, setPendingCheckoutAction] = useState(false)
+  const { paymentSettings } = settings
 
   const persistPendingConfirmationState = (orderId: string, paymentMethod: string, selectedCrypto?: string, selectedNetwork?: string) => {
     setPendingOrderId(orderId)
@@ -107,7 +148,71 @@ function CheckoutPageContent() {
   const clearPendingConfirmationState = () => {
     setPendingOrderId(null)
     setShowPendingConfirmation(false)
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(CHECKOUT_PENDING_STORAGE_KEY)
+    }
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const storedState = window.sessionStorage.getItem(CHECKOUT_PENDING_STORAGE_KEY)
+      if (!storedState) return
+      const parsed = JSON.parse(storedState)
+      if (parsed?.pendingOrderId) {
+        setPendingOrderId(parsed.pendingOrderId)
+      }
+      if (parsed?.showPendingConfirmation) {
+        setShowPendingConfirmation(true)
+      }
+      if (parsed?.paymentMethod) {
+        setPaymentMethod(parsed.paymentMethod)
+      }
+      if (parsed?.selectedCrypto) {
+        setSelectedCrypto(parsed.selectedCrypto)
+      }
+      if (parsed?.selectedNetwork) {
+        setSelectedNetwork(parsed.selectedNetwork)
+      }
+      if (parsed?.buyNowItem) {
+        setFallbackBuyNowItem(normalizeBuyNowItem(parsed.buyNowItem))
+      }
+      if (parsed?.pendingCheckoutItems) {
+        setPendingCheckoutItems(parsed.pendingCheckoutItems)
+      }
+      if (parsed?.formData) {
+        setFormData(prev => ({
+          ...prev,
+          email: parsed.formData.email || prev.email,
+          firstName: parsed.formData.firstName || prev.firstName,
+          lastName: parsed.formData.lastName || prev.lastName,
+          agreeToTerms: parsed.formData.agreeToTerms ?? prev.agreeToTerms
+        }))
+      }
+    } catch (error) {
+      console.warn('Failed to restore checkout pending state', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const payload = {
+      pendingOrderId,
+      showPendingConfirmation,
+      paymentMethod,
+      selectedCrypto,
+      selectedNetwork,
+      buyNowItem: effectiveBuyNowItem || null,
+      pendingCheckoutItems,
+      formData: {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        agreeToTerms: formData.agreeToTerms
+      }
+    }
+    window.sessionStorage.setItem(CHECKOUT_PENDING_STORAGE_KEY, JSON.stringify(payload))
+  }, [pendingOrderId, showPendingConfirmation, paymentMethod, selectedCrypto, selectedNetwork, effectiveBuyNowItem, pendingCheckoutItems, formData.email, formData.firstName, formData.lastName, formData.agreeToTerms])
 
   const cancelPendingOrder = async (orderId: string | null) => {
     if (!orderId) return
@@ -123,18 +228,6 @@ function CheckoutPageContent() {
     }
   }
 
-  const [formData, setFormData] = useState({
-    email: user?.email || "",
-    firstName: user?.name?.split(' ')[0] || "",
-    lastName: user?.name?.split(' ').slice(1).join(' ') || "",
-    cardNumber: "",
-    expiry: "",
-    cvc: "",
-    agreeToTerms: false
-  })
-  const [pendingCheckoutAction, setPendingCheckoutAction] = useState(false)
-  const { paymentSettings } = settings
-
   // Restore checkout state after login
   useEffect(() => {
     if (user && isAuthenticated && !pendingCheckoutAction && !isLoading) {
@@ -144,18 +237,8 @@ function CheckoutPageContent() {
         firstName: user.name?.split(' ')[0] || prev.firstName,
         lastName: user.name?.split(' ').slice(1).join(' ') || prev.lastName
       }))
-
     }
   }, [user, isAuthenticated, pendingCheckoutAction, isLoading])
-
-  // Only auto-submit if payment was already requested before login
-  const [shouldAutoSubmitAfterLogin, setShouldAutoSubmitAfterLogin] = useState(false)
-
-  useEffect(() => {
-    if (shouldAutoSubmitAfterLogin && pendingCheckoutAction && user && isAuthenticated && !isProcessing && !isLoading && (!isBuyNow || !isBuyNowLoading)) {
-      setShouldAutoSubmitAfterLogin(false)
-    }
-  }, [shouldAutoSubmitAfterLogin, pendingCheckoutAction, user, isAuthenticated, isProcessing, isLoading, isBuyNow, isBuyNowLoading])
 
   useEffect(() => {
     hasMounted.current = true
@@ -166,6 +249,51 @@ function CheckoutPageContent() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!pendingAction || pendingAction.type !== 'checkout' || !pendingAction.data) return
+    const savedAutoSubmit = typeof window !== 'undefined'
+      ? window.sessionStorage.getItem('checkout_login_auto_submit')
+      : null
+
+    if (pendingAction.data.checkoutItems && pendingAction.data.checkoutItems.length > 0 && items.length === 0) {
+      setPendingCheckoutItems(pendingAction.data.checkoutItems.map((item: any) => ({
+        account: item.account,
+        quantity: item.quantity,
+        verificationCount: item.verificationCount
+      })))
+    }
+
+    if (pendingAction.data.isBuyNow && pendingAction.data.checkoutItems?.length === 1 && !effectiveBuyNowItem) {
+      setFallbackBuyNowItem(normalizeBuyNowItem(pendingAction.data.checkoutItems[0]))
+    }
+
+    if (pendingAction.data.formData) {
+      setFormData(prev => ({
+        ...prev,
+        email: pendingAction.data.formData.email || prev.email,
+        firstName: pendingAction.data.formData.firstName || prev.firstName,
+        lastName: pendingAction.data.formData.lastName || prev.lastName,
+        agreeToTerms: pendingAction.data.formData.agreeToTerms ?? prev.agreeToTerms
+      }))
+    }
+
+    if (pendingAction.data.paymentMethod) {
+      setPaymentMethod(pendingAction.data.paymentMethod)
+    }
+    if (pendingAction.data.selectedCrypto) {
+      setSelectedCrypto(pendingAction.data.selectedCrypto)
+    }
+    if (pendingAction.data.selectedNetwork) {
+      setSelectedNetwork(pendingAction.data.selectedNetwork)
+    }
+
+    if (savedAutoSubmit === '1' && isAuthenticated && !isLoading && !isProcessing) {
+      window.sessionStorage.removeItem('checkout_login_auto_submit')
+      setPendingCheckoutAction(true)
+      void handleCheckoutSubmit(pendingAction.data.paymentMethod || paymentMethod)
+    }
+  }, [pendingAction, isAuthenticated, isLoading, isProcessing, items.length, effectiveBuyNowItem, paymentMethod])
 
   const hasPayPalLink = paymentSettings.paypalLinkEnabled
   const hasPayPalApi = paymentSettings.paypalApiEnabled
@@ -229,7 +357,7 @@ function CheckoutPageContent() {
     }
 
     if (items.length === 0) {
-      return getPendingCheckoutItems()
+      return pendingCheckoutItems
     }
 
     return items
@@ -261,6 +389,7 @@ function CheckoutPageContent() {
           isBuyNow,
           checkoutItems: submissionItems.map((item: any) => ({
             productId: item.account.id,
+            account: item.account,
             quantity: item.quantity,
             verificationCount: item.verificationCount,
             verificationUnitPrice: item.account.verificationPrice ?? 0,
@@ -275,7 +404,9 @@ function CheckoutPageContent() {
           targetPage: pendingTargetPage || "/checkout"
         })
         
-        setShouldAutoSubmitAfterLogin(true)
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('checkout_login_auto_submit', '1')
+        }
         redirectToLogin(pendingTargetPage)
         return null
       }
@@ -370,6 +501,7 @@ function CheckoutPageContent() {
         setShowPendingConfirmation(true)
         persistPendingConfirmationState(orderId, 'paypal')
         setPendingCheckoutAction(false)
+        setIsProcessing(false)
       } catch (error: any) {
         console.error("Error creating order:", error)
         alert(error?.message || "Failed to create order. Please try again.")
@@ -394,6 +526,7 @@ function CheckoutPageContent() {
         setShowPendingConfirmation(true)
         persistPendingConfirmationState(orderId, 'crypto', selectedCrypto, selectedNetwork)
         setPendingCheckoutAction(false)
+        setIsProcessing(false)
       } catch (error: any) {
         console.error("Error creating order:", error)
         alert("Failed to create order. Please try again.")
@@ -429,18 +562,27 @@ function CheckoutPageContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const manualPayment = paymentMethod === 'paypal' || paymentMethod === 'paypal_link' || paymentMethod === 'paypal_api' || paymentMethod === 'crypto'
+    if (manualPayment) {
+      setShowPaymentWarning(true)
+      return
+    }
+    await handleCheckoutSubmit(paymentMethod)
+  }
+
+  const handleConfirmWarning = async () => {
+    setShowPaymentWarning(false)
     await handleCheckoutSubmit(paymentMethod)
   }
 
   const handleConfirmPaymentSent = async () => {
-    if (!pendingOrderId) {
-      console.warn('No pending order ID found; creating a new pending order')
-    }
+    let confirmedOrderId = pendingOrderId
 
     try {
-      if (!pendingOrderId) {
+      if (!confirmedOrderId) {
         setIsProcessing(true)
         const orderId = await createOrderAndCustomer("pending", paymentMethod === 'paypal' ? 'PayPal' : `Crypto (${selectedCrypto} - ${selectedNetwork})`)
+        confirmedOrderId = orderId || null
         setPendingOrderId(orderId)
         if (orderId) {
           persistPendingConfirmationState(orderId, paymentMethod === 'paypal' ? 'paypal' : 'crypto', selectedCrypto, selectedNetwork)
@@ -449,6 +591,7 @@ function CheckoutPageContent() {
 
       pendingOrderCancelRef.current = false
       pendingOrderIdRef.current = null
+      setIsProcessing(false)
 
       // Clear the appropriate cart based on checkout mode
       if (isBuyNow) {
@@ -459,7 +602,11 @@ function CheckoutPageContent() {
 
       clearPendingConfirmationState()
       setPendingCheckoutAction(false)
-      router.push(`/checkout/success?pending=true&orderId=${pendingOrderId || ''}`)
+      if (confirmedOrderId) {
+        router.push(`/checkout/success?pending=true&orderId=${encodeURIComponent(confirmedOrderId)}`)
+      } else {
+        router.push(`/checkout/success?pending=true`)
+      }
     } catch (error: any) {
       console.error("Error confirming payment:", error)
       alert("Failed to confirm payment. Please try again.")
@@ -493,7 +640,7 @@ function CheckoutPageContent() {
     )
   }
 
-  if (checkoutItems.length === 0) {
+  if (checkoutItems.length === 0 && !showPendingConfirmation) {
     return (
       <div className="min-h-screen bg-white">
         <Header />
@@ -554,7 +701,7 @@ function CheckoutPageContent() {
           </button>
           
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-12">
-            <div>
+            <div className={showPendingConfirmation ? 'lg:col-span-2' : ''}>
               <h1 className="text-2xl sm:text-3xl font-bold text-black mb-4 sm:mb-8">Checkout</h1>
               
               {!showPendingConfirmation ? (
@@ -844,7 +991,7 @@ function CheckoutPageContent() {
                     checked={formData.agreeToTerms}
                     onCheckedChange={(checked) => setFormData({...formData, agreeToTerms: checked as boolean})}
                     required
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   />
                   <Label htmlFor="terms" className="text-[10px] sm:text-sm text-gray-600 leading-tight whitespace-nowrap">
                     I agree to <Link href="/terms" className="text-[#FE2C55] hover:underline">Terms</Link> and <Link href="/refund" className="text-[#FE2C55] hover:underline">Refund</Link>
@@ -883,15 +1030,15 @@ function CheckoutPageContent() {
               ) : (
               <div className="space-y-4 sm:space-y-8">
                 {showPendingConfirmation && (
-                  <>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-start gap-2">
-                        <div className="w-7 h-7 sm:w-9 sm:h-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0 flex-none">
-                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+                  <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+                    <div className="bg-red-50 border border-red-200 rounded-3xl p-6 sm:p-8">
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-6 h-6 text-red-600" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-semibold text-blue-900 text-xs sm:text-sm">Confirm Payment Sent</h3>
-                          <p className="text-[8px] sm:text-xs text-blue-700 leading-tight mt-1">
+                          <h3 className="font-semibold text-red-900 text-lg sm:text-xl">Confirm Payment Sent</h3>
+                          <p className="text-sm sm:text-base text-red-700 leading-relaxed mt-2">
                             {paymentMethod === 'paypal' 
                               ? 'You will be redirected to PayPal. Click the button below once you have completed the payment.'
                               : 'Make sure you have sent the exact amount to the address above. Click the button below once your payment is sent.'
@@ -900,11 +1047,11 @@ function CheckoutPageContent() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <Button
                       type="button"
                       onClick={handleConfirmPaymentSent}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full text-lg py-6"
+                      className="w-full bg-yellow-400 hover:bg-yellow-500 text-black rounded-full text-lg py-6"
                     >
                       I&apos;ve Sent the Payment
                     </Button>
@@ -912,11 +1059,11 @@ function CheckoutPageContent() {
                       <button
                         type="button"
                         onClick={async () => {
-                          // allow user to manually cancel the pending order
                           await cancelPendingOrder(pendingOrderId)
                           clearPendingConfirmationState()
                           setShowPendingConfirmation(false)
                           setPendingOrderId(null)
+                          setIsProcessing(false)
                           pendingOrderCancelRef.current = false
                           pendingOrderIdRef.current = null
                         }}
@@ -925,14 +1072,14 @@ function CheckoutPageContent() {
                         Cancel
                       </button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
               )}
             </div>
             
             {/* Order Summary */}
-            <div>
+            <div className={showPendingConfirmation ? 'hidden' : ''}>
               <div className="bg-white rounded-2xl p-6 border border-gray-100 sticky top-24">
                 <h2 className="text-xl font-bold text-black mb-6">Order Summary</h2>
                 
@@ -1067,6 +1214,30 @@ function CheckoutPageContent() {
       </main>
       
       <Footer />
+
+      <Dialog open={showPaymentWarning} onOpenChange={setShowPaymentWarning}>
+        <DialogContent className="max-w-lg">
+          <div className="flex justify-center mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </div>
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-red-600 text-center text-xl font-semibold">Payment Confirmation Required</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 rounded-2xl bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-700 text-center">
+            After clicking continue, you will be taken to the payment instructions page. You must click the confirmation button there once payment is sent.
+          </div>
+          <DialogFooter className="mt-6 flex justify-center gap-2">
+            <Button type="button" className="bg-[#FE2C55] hover:bg-[#FE2C55]/90 text-white" onClick={handleConfirmWarning}>
+              Continue
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setShowPaymentWarning(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

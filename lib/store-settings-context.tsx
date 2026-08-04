@@ -297,9 +297,9 @@ export function StoreSettingsProvider({ children, initialSettings }: { children:
       })
 
       if (response.status === 401) {
-        console.warn('[store-settings] Admin session missing or expired; redirecting to /admin/login')
+        console.warn('[store-settings] Admin session missing or expired; redirecting to /ks7q/login')
         if (typeof window !== 'undefined') {
-          window.location.href = '/admin/login'
+          window.location.href = '/ks7q/login'
           return
         }
       }

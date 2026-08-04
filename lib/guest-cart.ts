@@ -2,13 +2,19 @@ export const GUEST_CART_STORAGE_KEY = 'guest_cart_session_v1'
 export const GUEST_CART_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 export function getGuestCartStorage(): Storage | null {
-  if (typeof window === 'undefined') return null
-
-  try {
-    return window.localStorage
-  } catch {
-    return null
+  if (typeof window !== 'undefined') {
+    try {
+      return window.localStorage
+    } catch {
+      return null
+    }
   }
+
+  if (typeof globalThis !== 'undefined' && typeof (globalThis as any).localStorage !== 'undefined') {
+    return (globalThis as any).localStorage as Storage
+  }
+
+  return null
 }
 
 export function normalizeGuestCartItem(item: any) {

@@ -16,12 +16,35 @@ interface PendingActionContextType {
 }
 
 const PendingActionContext = createContext<PendingActionContextType | undefined>(undefined)
+const PENDING_ACTION_STORAGE_KEY = 'pending_action_state_v1'
 
 export function PendingActionProvider({ children }: { children: ReactNode }) {
-  const [pendingAction, setPendingAction] = useState<PendingAction>({ type: null })
+  const [pendingAction, setPendingAction] = useState<PendingAction>(() => {
+    if (typeof window === 'undefined') {
+      return { type: null }
+    }
+
+    try {
+      const stored = window.sessionStorage.getItem(PENDING_ACTION_STORAGE_KEY)
+      if (stored) {
+        return JSON.parse(stored)
+      }
+    } catch (error) {
+      console.warn('Failed to parse pending action from storage', error)
+    }
+
+    return { type: null }
+  })
 
   const savePendingAction = useCallback((action: PendingAction) => {
     setPendingAction(action)
+    if (typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.setItem(PENDING_ACTION_STORAGE_KEY, JSON.stringify(action))
+      } catch (error) {
+        console.warn('Failed to persist pending action', error)
+      }
+    }
   }, [])
 
   const getPendingAction = useCallback(() => {
@@ -30,6 +53,9 @@ export function PendingActionProvider({ children }: { children: ReactNode }) {
 
   const clearPendingAction = useCallback(() => {
     setPendingAction({ type: null })
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(PENDING_ACTION_STORAGE_KEY)
+    }
   }, [])
 
   return (

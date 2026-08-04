@@ -30,6 +30,7 @@ function SuccessContent() {
       router.push("/login")
     }
   }, [isLoading, isAuthenticated, isPending, router])
+
   
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
@@ -63,19 +64,19 @@ function SuccessContent() {
   }
   
   return (
-    <div className="max-w-2xl mx-auto text-center">
-      <div className={`w-24 h-24 ${isPending ? 'bg-amber-100' : 'bg-[#25F4EE]/10'} rounded-full flex items-center justify-center mx-auto mb-8`}>
+    <div className="max-w-2xl mx-auto text-center px-6 py-8 sm:px-0">
+      <div className={`w-28 h-28 ${isPending ? 'bg-amber-100' : 'bg-[#25F4EE]/10'} rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-black/5`}>
         {isPending ? (
-          <AlertCircle className="w-12 h-12 text-amber-500" />
+          <AlertCircle className="w-14 h-14 text-amber-500" />
         ) : (
-          <CheckCircle className="w-12 h-12 text-[#25F4EE]" />
+          <CheckCircle className="w-14 h-14 text-[#25F4EE]" />
         )}
       </div>
       
-      <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">
+      <h1 className="text-5xl md:text-6xl font-bold text-black mb-4 leading-tight">
         {isPending ? 'Order Submitted!' : 'Payment Successful!'}
       </h1>
-      <p className="text-xl text-gray-600 mb-4">
+      <p className={`text-xl md:text-2xl ${isPending ? 'text-amber-900' : 'text-gray-600'} mb-4`}>
         {isPending 
           ? 'Your order is pending payment confirmation. We will verify your payment and process your order shortly.'
           : 'Thank you for your purchase. Your account transfer is now being processed.'
@@ -83,7 +84,7 @@ function SuccessContent() {
       </p>
       
       {orderId && (
-        <div className="inline-block bg-gray-100 rounded-lg px-4 py-2 mb-8">
+        <div className={`inline-block rounded-3xl px-6 py-4 mb-8 ${isPending ? 'bg-amber-50 border border-amber-200' : 'bg-gray-100'} text-left`}>
           <p className="text-sm text-gray-500">Order Reference</p>
           <p className="font-mono font-bold text-black">{orderId}</p>
         </div>
@@ -107,7 +108,7 @@ function SuccessContent() {
         
         <div className="space-y-6 text-left">
           <div className="flex gap-4">
-            <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-[#FE2C55] rounded-full flex items-center justify-center shrink-0">
               <Mail className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -119,7 +120,7 @@ function SuccessContent() {
           </div>
           
           <div className="flex gap-4">
-            <div className="w-10 h-10 bg-[#25F4EE] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-[#25F4EE] rounded-full flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 text-black" />
             </div>
             <div>
@@ -131,7 +132,7 @@ function SuccessContent() {
           </div>
           
           <div className="flex gap-4">
-            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center shrink-0">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -209,7 +210,7 @@ function SuccessContent() {
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                   placeholder="Tell us about your experience..."
-                  className="mt-1 min-h-[100px]"
+                  className="mt-1 min-h-25"
                 />
               </div>
               

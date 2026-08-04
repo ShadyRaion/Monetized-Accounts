@@ -5,17 +5,18 @@ import { apiPath, authHeaders, apiFetch } from "@/lib/api"
 import { getAnonymousInitials } from "@/lib/utils"
 import { useUserAuth } from "@/lib/user-auth-context"
 import { useAdminAuth } from "@/lib/admin-auth-context"
-import type { Product, Order, OrderProduct, Review, Customer, Subscriber, Affiliate } from "@/lib/types"
+import type { Product, ProductType, Order, OrderProduct, Review, Customer, Subscriber, Affiliate } from "@/lib/types"
 
 // Extended Account type that matches both admin and customer needs
 export interface Account {
   id: string
   platform: "TikTok" | "YouTube"
-  type: string
+  type: ProductType
   title: string
   followers: string
   followersNum: number
   price: number
+  originalPrice?: number
   badge: string
   badgeColor: string
   description: string
@@ -212,6 +213,7 @@ function productToAccount(product: Product): Account {
     followers: product.followers,
     followersNum: parseFollowers(product.followers),
     price: product.price,
+    originalPrice: product.originalPrice,
     badge: product.badge ?? "",
     badgeColor: product.badge === "Popular" ? "bg-[#FE2C55]" : product.badge === "Best Value" ? "bg-green-500" : "",
     description: product.description,
@@ -244,7 +246,7 @@ function mapBackendProduct(product: any): Product {
   return {
     id: product.id,
     platform: product.platform as "TikTok" | "YouTube",
-    type: product.type ?? "",
+    type: (product.type ? String(product.type) : "US TikTok Shop") as ProductType,
     title: product.title ?? "",
     followers: String(product.followers ?? "0"),
     followersNum: Number(product.followers ?? 0),
@@ -253,6 +255,7 @@ function mapBackendProduct(product: any): Product {
     badgeColor: product.badge === "Popular" ? "bg-[#FE2C55]" : product.badge === "Best Value" ? "bg-green-500" : "",
     description: product.description ?? "",
     features: Array.isArray(product.features) ? product.features : [],
+    originalPrice: product.originalPrice !== undefined ? Number(product.originalPrice || 0) : undefined,
     verified: Number(verificationPrice) === 0,
     verificationPrice,
     transferTime: product.transferTime ?? "Instant",
@@ -706,7 +709,7 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
         })
       }
 
-      // Subscribers/admin endpoints are admin-only; skip when not admin.
+      // Load subscribers for all sessions so the UI can reflect the real backend state.
       let subscribersPromise: Promise<any> | null = Promise.resolve(null)
       if (isAdminSession) {
         subscribersPromise = apiFetch(apiPath("/admin/subscribers"), { headers: authHeaders(undefined, true) })
@@ -716,6 +719,13 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
               const fallback = await apiFetch(apiPath("/subscribers"), { headers })
               return fallback.ok ? await fallback.json() : null
             }
+            return null
+          })
+          .catch((err) => { console.warn("Failed to load subscribers:", err); return null })
+      } else {
+        subscribersPromise = apiFetch(apiPath("/subscribers"), { headers })
+          .then(async (res) => {
+            if (res.ok) return await res.json()
             return null
           })
           .catch((err) => { console.warn("Failed to load subscribers:", err); return null })

@@ -100,6 +100,7 @@ function buildProductData(body: any) {
     hasVerificationFee,
     verificationPrice,
     price,
+    originalPrice,
     description,
     features,
     badge,
@@ -127,6 +128,10 @@ function buildProductData(body: any) {
   }
 
   if (price !== undefined) data.price = Number(price || 0)
+  if (originalPrice !== undefined) {
+    const parsedOriginal = Number(originalPrice || 0)
+    data.originalPrice = Number.isFinite(parsedOriginal) && parsedOriginal > 0 ? parsedOriginal : null
+  }
   if (title !== undefined) data.title = title || null
   if (description !== undefined) data.description = description || null
   if (features !== undefined) data.features = normalizeFeatures(features)

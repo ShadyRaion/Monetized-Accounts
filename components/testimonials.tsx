@@ -151,7 +151,7 @@ export function Testimonials() {
               {repeatedTestimonials.map((testimonial) => (
                 <div
                   key={testimonial.key}
-                  className="flex-shrink-0 min-w-[18rem] max-w-[20rem] bg-gray-50 rounded-3xl p-4 sm:p-6 border border-gray-100 select-none"
+                  className="shrink-0 min-w-[18rem] max-w-[20rem] bg-gray-50 rounded-3xl p-4 sm:p-6 border border-gray-100 select-none"
                 >
                   <div className="flex gap-0.5 sm:gap-1 mb-2 sm:mb-3">
                     {[...Array(5)].map((_, i) => (

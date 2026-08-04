@@ -47,6 +47,7 @@ model Product {
   followers          Int
   hasVerificationFee Boolean     @default(false)
   price              Float
+  originalPrice      Float?
   inStock            Boolean     @default(true)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
