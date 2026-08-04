@@ -57,10 +57,14 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
   const isInCart = items.some(item => item.account.id === account.id)
   const hasVerificationFee = account.verificationPrice > 0
-  
-  const relatedAccounts = accounts
-    .filter(a => a.platform === account.platform && a.id !== account.id)
-    .slice(0, 3)
+
+  const sameTypeAccounts = accounts.filter(a => a.type === account.type && a.id !== account.id)
+  const samePlatformAccounts = accounts.filter(a => a.platform === account.platform && a.id !== account.id)
+
+  const relatedAccounts = [
+    ...sameTypeAccounts.slice(0, 3),
+    ...samePlatformAccounts.filter(a => !sameTypeAccounts.some(s => s.id === a.id)).slice(0, Math.max(0, 3 - sameTypeAccounts.length))
+  ].slice(0, 3)
 
   return (
     <div className="min-h-screen bg-white">
@@ -133,11 +137,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <div>
                     <span className="text-gray-500 text-xs sm:text-sm">Price</span>
-                    <div className="text-2xl sm:text-4xl font-bold text-black">{formatPrice(account.price)}</div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-gray-500 text-xs sm:text-sm">Type</span>
-                    <div className="text-sm sm:text-lg font-bold" style={{ color: settings.primaryColor }}>{account.type}</div>
+                    <div className="flex items-end gap-3 mt-1">
+                      <div className="text-2xl sm:text-4xl font-bold text-black">{formatPrice(account.price)}</div>
+                      {account.originalPrice && account.originalPrice > account.price ? (
+                        <div className="text-sm font-medium text-red-500 line-through">{formatPrice(account.originalPrice)}</div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
@@ -250,7 +255,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       router.push('/checkout?buyNow=true')
                     }}
                   >
-                    {account.inStock ? `Buy Now - ${formatPrice(account.price * quantity)}` : 'Out of Stock'}
+                    {account.inStock ? `Buy Now - ${formatPrice(account.price * quantity + (buyNowAddVerification ? account.verificationPrice * buyNowVerificationCountLocal : 0))}` : 'Out of Stock'}
                   </Button>
                   <Button 
                     className="rounded-full h-auto px-4"
@@ -290,7 +295,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           
           {relatedAccounts.length > 0 && (
             <section className="mt-16">
-              <h2 className="text-2xl font-bold text-black mb-6">Similar Accounts</h2>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-black">Similar Accounts</h2>
+              </div>
               <div className="grid md:grid-cols-3 gap-6">
                 {relatedAccounts.map((related) => (
                   <Link 
@@ -298,23 +305,39 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     href={`/product/${related.id}`}
                     className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[#FE2C55] transition-all hover:shadow-lg"
                   >
-                    <div className="bg-black p-4">
-                      {related.badge && <Badge className={related.badgeColor}>{related.badge}</Badge>}
-                      <div className="text-white font-bold mt-2">{related.platform}</div>
-                      <div className="text-[#25F4EE] text-sm">{related.type}</div>
+                    <div className="bg-black p-4 relative">
+                      {related.badge && (
+                        <Badge className={`${related.badgeColor} absolute top-3 right-3`}>
+                          {related.badge}
+                        </Badge>
+                      )}
+                      <div className="text-white font-bold text-sm sm:text-[15px] leading-tight pr-10">{related.title || related.platform}</div>
+                      <div className="text-[#25F4EE] text-[11px] sm:text-xs mt-1 pr-10">{related.type}</div>
                     </div>
                     <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <span className="text-gray-500">Followers</span>
-                        <span className="font-bold">{related.followers}</span>
+                        <span className="font-bold text-black">{formatFollowers(related.followers)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500">Price</span>
-                        <span className="font-bold" style={{ color: settings.primaryColor }}>{formatPrice(related.price)}</span>
+                        <div className="flex items-baseline gap-2">
+                          {related.originalPrice && related.originalPrice > related.price ? (
+                            <span className="text-sm font-medium text-red-500 line-through">{formatPrice(related.originalPrice)}</span>
+                          ) : null}
+                          <span className="font-bold text-black">{formatPrice(related.price)}</span>
+                        </div>
                       </div>
                     </div>
                   </Link>
                 ))}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Link href="/shop">
+                  <Button className="rounded-full text-sm py-3 px-6" style={{ backgroundColor: '#FE2C55', color: 'white' }}>
+                    See more
+                  </Button>
+                </Link>
               </div>
             </section>
           )}

@@ -51,12 +51,41 @@ import {
 } from "@/components/ui/breadcrumb"
 
 const PRODUCT_TYPES = [
+  "Monetized Tiktok",
+  "US Shop Affiliate",
+  "UK Shop Affiliate",
   "US TikTok Shop",
   "UK TikTok Shop",
   "Non-TTS/Affiliate",
   "YouTube Aged",
   "YouTube Monetized"
-]
+] as const
+
+type ProductFormType = (typeof PRODUCT_TYPES)[number]
+
+type ProductFormData = {
+  id: string
+  platform: "TikTok" | "YouTube"
+  type: ProductFormType
+  title: string
+  followers: string
+  price: number
+  originalEnabled: boolean
+  originalPrice: number
+  verificationEnabled: boolean
+  verificationPrice: number
+  description: string
+  features: string
+  badge: string
+  transferTime: string
+  inStock: boolean
+}
+
+interface ProductFormProps {
+  formData: ProductFormData
+  setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
+  isEdit?: boolean
+}
 
 export default function ProductsPage() {
   const { user, isLoading } = useAdminAuth()
@@ -72,13 +101,15 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductFormData>({
     id: "",
-    platform: "TikTok" as "TikTok" | "YouTube",
+    platform: "TikTok",
     type: PRODUCT_TYPES[0],
     title: "",
     followers: "",
     price: 0,
+    originalEnabled: false,
+    originalPrice: 0,
     verificationEnabled: false,
     verificationPrice: 0,
     description: "",
@@ -113,7 +144,7 @@ export default function ProductsPage() {
   })
 
   // Get unique types for filter - filter out empty/null values
-  const uniqueTypes = [...new Set(products.map(p => p.type).filter((type): type is string => !!(type && type.trim())))]
+  const uniqueTypes = [...new Set(products.map(p => p.type).filter((type): type is ProductFormType => !!(type && type.trim())))] as ProductFormType[]
   const validTypes = uniqueTypes.length > 0 ? uniqueTypes : []
 
   const generateProductId = (platform: string, type: string, followers: string) => {
@@ -135,10 +166,11 @@ export default function ProductsPage() {
     const newProduct: Product = {
       id,
       platform: formData.platform,
-      type: formData.type,
+      type: formData.type as ProductFormType,
       title: formData.title,
       followers: String(formData.followers || "0"),
       price: formData.price,
+      originalPrice: formData.originalEnabled ? formData.originalPrice : undefined,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
       description: formData.description,
       features: formData.features.split("\n").filter(f => f.trim()),
@@ -162,10 +194,11 @@ export default function ProductsPage() {
 
     updateProduct(editingProduct.id, {
       platform: formData.platform,
-      type: formData.type,
+      type: formData.type as ProductFormType,
       title: formData.title,
       followers: formData.followers,
       price: formData.price,
+      originalPrice: formData.originalEnabled ? (formData.originalPrice > 0 ? formData.originalPrice : undefined) : undefined,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
       description: formData.description,
       features: formData.features.split("\n").filter(f => f.trim()),
@@ -231,6 +264,8 @@ export default function ProductsPage() {
       title: product.title ?? "",
       followers: product.followers,
       price: product.price,
+      originalEnabled: (product.originalPrice ?? 0) > 0,
+      originalPrice: product.originalPrice ?? 0,
       verificationEnabled: (product.verificationPrice ?? 0) > 0,
       verificationPrice: (product.verificationPrice ?? 0) > 0 ? product.verificationPrice ?? 0 : 30,
       description: product.description,
@@ -250,6 +285,8 @@ export default function ProductsPage() {
       title: "",
       followers: "",
       price: 0,
+      originalEnabled: false,
+      originalPrice: 0,
       verificationEnabled: false,
       verificationPrice: 0,
       description: "",
@@ -494,10 +531,12 @@ interface ProductFormProps {
   formData: {
     id: string
     platform: "TikTok" | "YouTube"
-    type: string
+    type: ProductFormType
     title: string
     followers: string
     price: number
+    originalEnabled: boolean
+    originalPrice: number
     verificationEnabled: boolean
     verificationPrice: number
     description: string
@@ -514,16 +553,6 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-2 gap-4">
-        {isEdit && (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="id">Product ID</Label>
-            <Input
-              id="id"
-              value={formData.id}
-              disabled
-            />
-          </div>
-        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="platform">Platform *</Label>
           <Select value={formData.platform} onValueChange={(v) => setFormData({ ...formData, platform: v as "TikTok" | "YouTube" })}>
@@ -549,7 +578,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="type">Type *</Label>
-          <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+          <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as ProductFormType })}>
             <SelectTrigger>
               <SelectValue placeholder="Select account type" />
             </SelectTrigger>
@@ -574,7 +603,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="price">Price ($) *</Label>
+          <Label htmlFor="price">Sale Price ($) *</Label>
           <Input
             id="price"
             type="number"
@@ -583,8 +612,33 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="verificationEnabled">Verification Fee</Label>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="originalEnabled"
+              checked={formData.originalEnabled}
+              onCheckedChange={(checked) => {
+                const enabled = Boolean(checked)
+                setFormData({
+                  ...formData,
+                  originalEnabled: enabled,
+                  originalPrice: enabled ? formData.originalPrice : 0
+                })
+              }}
+            />
+            <Label htmlFor="originalEnabled">Original Price</Label>
+          </div>
+          <Input
+            id="originalPrice"
+            type="number"
+            disabled={!formData.originalEnabled}
+            value={formData.originalPrice}
+            onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
             <Checkbox
               id="verificationEnabled"
               checked={formData.verificationEnabled}
@@ -597,6 +651,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
                 })
               }}
             />
+            <Label htmlFor="verificationEnabled">Verification Fee</Label>
           </div>
           <Input
             id="verificationPrice"

@@ -105,6 +105,7 @@ export default function ShopPage() {
           followers: p.followers,
           followersNum: Number(p.followers || 0),
           price: Number(p.price || 0),
+          originalPrice: p.originalPrice !== undefined ? Number(p.originalPrice || 0) : undefined,
           badge: p.badge || "",
           badgeColor: p.platform === "TikTok" ? "bg-pink-600" : "bg-red-600",
           description: p.description || "",
@@ -208,6 +209,9 @@ export default function ShopPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="Monetized Tiktok">Monetized Tiktok</SelectItem>
+                    <SelectItem value="US Shop Affiliate">US Shop Affiliate</SelectItem>
+                    <SelectItem value="UK Shop Affiliate">UK Shop Affiliate</SelectItem>
                     <SelectItem value="US TikTok Shop">US TikTok Shop</SelectItem>
                     <SelectItem value="UK TikTok Shop">UK TikTok Shop</SelectItem>
                     <SelectItem value="Non-TTS/Affiliate">Non-TTS/Affiliate</SelectItem>
@@ -280,7 +284,10 @@ export default function ShopPage() {
                     <div className="border-t border-gray-100 pt-4">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-gray-500">Price</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-baseline gap-2">
+                          {account.originalPrice && account.originalPrice > account.price ? (
+                            <span className="text-sm font-medium text-red-500 line-through">{formatPrice(account.originalPrice)}</span>
+                          ) : null}
                           <span className="text-2xl font-bold text-black">{formatPrice(account.price)}</span>
                         </div>
                       </div>
