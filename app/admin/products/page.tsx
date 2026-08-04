@@ -170,7 +170,7 @@ export default function ProductsPage() {
       title: formData.title,
       followers: String(formData.followers || "0"),
       price: formData.price,
-      originalPrice: formData.originalEnabled ? formData.originalPrice : undefined,
+      originalPrice: formData.originalEnabled && formData.originalPrice > 0 ? formData.originalPrice : undefined,
       verificationPrice: formData.verificationEnabled ? (formData.verificationPrice > 0 ? formData.verificationPrice : 30) : 0,
       description: formData.description,
       features: formData.features.split("\n").filter(f => f.trim()),
