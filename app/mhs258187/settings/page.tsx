@@ -267,18 +267,10 @@ export default function SettingsPage() {
     })
   }
   
-  const deriveSymbolFromName = (name: string) => {
-    const cleaned = name.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
-    if (!cleaned) return ""
-    if (cleaned.length <= 3) return cleaned
-    return cleaned.slice(0, 3)
-  }
-
   const addCryptoCurrency = () => {
     if (!newCryptoName) return
     const newCurrency: CryptoCurrency = {
       name: newCryptoName,
-      symbol: deriveSymbolFromName(newCryptoName),
       networks: []
     }
     updatePaymentSettings({
@@ -1221,9 +1213,6 @@ export default function SettingsPage() {
                               placeholder="Name (Required)"
                               className="bg-zinc-800 border-zinc-700 text-white h-7 text-[9px]"
                             />
-                            <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-2 text-[9px] text-zinc-400 h-7 sm:w-24">
-                              <span className="truncate">Symbol: {deriveSymbolFromName(newCryptoName) || "—"}</span>
-                            </div>
                             <Button
                               onClick={addCryptoCurrency}
                               disabled={!newCryptoName}
@@ -1239,8 +1228,8 @@ export default function SettingsPage() {
                           <div key={cryptoIndex} className="p-2 sm:p-3 bg-zinc-900 rounded space-y-2">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-cyan-500/20 rounded-full flex-shrink-0 flex items-center justify-center">
-                                  <span className="text-cyan-400 text-[8px] sm:text-xs font-bold">{crypto.symbol.slice(0, 2)}</span>
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                                  <span className="text-cyan-400 text-[8px] sm:text-xs font-bold">{crypto.name.slice(0, 2).toUpperCase()}</span>
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-white font-medium text-[9px] sm:text-xs">{crypto.name}</p>

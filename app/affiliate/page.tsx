@@ -1520,8 +1520,8 @@ function PaymentMethodDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {settings.paymentSettings?.cryptoCurrencies.map((crypto: any) => (
-                    <SelectItem key={`${crypto.name}-${crypto.symbol}`} value={crypto.name}>
-                      {crypto.name} ({crypto.symbol})
+                    <SelectItem key={crypto.name} value={crypto.name}>
+                      {crypto.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -10,7 +10,6 @@ export interface CryptoNetwork {
 
 export interface CryptoCurrency {
   name: string
-  symbol: string
   networks: CryptoNetwork[]
 }
 

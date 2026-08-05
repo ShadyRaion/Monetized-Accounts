@@ -323,7 +323,7 @@ function CheckoutPageContent() {
   if (paymentSettings.cryptoEnabled && paymentSettings.cryptoCurrencies.length > 0) availablePaymentMethods.push('crypto')
 
   // Get selected crypto currency and network details
-  const selectedCryptoCurrency = paymentSettings.cryptoCurrencies.find(c => c.symbol === selectedCrypto)
+  const selectedCryptoCurrency = paymentSettings.cryptoCurrencies.find(c => c.name === selectedCrypto)
   const selectedNetworkData = selectedCryptoCurrency?.networks.find(n => n.network === selectedNetwork)
 
   const copyToClipboard = (text: string) => {
@@ -917,8 +917,8 @@ function CheckoutPageContent() {
                           </SelectTrigger>
                           <SelectContent>
                             {paymentSettings.cryptoCurrencies.map((crypto) => (
-                              <SelectItem key={crypto.symbol} value={crypto.symbol}>
-                                {crypto.name} ({crypto.symbol})
+                              <SelectItem key={crypto.name} value={crypto.name}>
+                                {crypto.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
