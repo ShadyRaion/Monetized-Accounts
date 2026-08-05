@@ -314,7 +314,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/ks7q/login")
+      router.replace("/mhs258187/login")
     }
   }, [isLoading, isAuthenticated, router])
 

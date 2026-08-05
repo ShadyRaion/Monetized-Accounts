@@ -58,19 +58,15 @@ export default function ShopPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const url = apiPath('/products')
-        console.log('Shop page: Fetching products from URL:', url)
-        const response = await fetch(url)
-        console.log('Shop page: Response status:', response.status)
+        const response = await fetch(apiPath('/products'))
         if (response.ok) {
           const data = await response.json()
-          console.log('Shop page: Received products:', data)
           setProducts(Array.isArray(data) ? data : [])
         } else {
-          console.error('Shop page: Response not OK:', response.status)
+          setProducts([])
         }
       } catch (error) {
-        console.error("Error fetching products:", error)
+        setProducts([])
       } finally {
         setLoading(false)
       }
@@ -89,7 +85,7 @@ export default function ShopPage() {
   // Convert products to accounts format
   const accounts = useMemo(() => {
     return products
-      .filter(p => p && p.id)
+      .filter(p => p && p.id && !p.hidden)
       .map(p => {
         const verificationPrice = p.verificationPrice !== undefined
           ? Number(p.verificationPrice || 0)

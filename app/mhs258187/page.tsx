@@ -213,13 +213,13 @@ export default function AdminDashboardPage() {
           <p className="text-[9px] sm:text-xs text-white">Welcome, {user.name}</p>
         </div>
         <div className="flex gap-1 flex-wrap">
-          <Link href="/ks7q/products">
+          <Link href="/mhs258187/products">
             <Button className="bg-[#FE2C55] hover:bg-[#FE2C55]/90 text-white text-[10px] sm:text-xs py-1.5 px-2 sm:px-3 h-auto">
               <Package className="mr-0.5 sm:mr-1 h-3 w-3" />
               Add Product
             </Button>
           </Link>
-          <Link href="/ks7q/messages">
+          <Link href="/mhs258187/messages">
             <Button variant="outline" className="text-[10px] sm:text-xs py-1.5 px-2 sm:px-3 h-auto">
               <MessageSquare className="mr-0.5 sm:mr-1 h-3 w-3" />
               Messages
@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xs sm:text-base">Recent Orders</CardTitle>
             <CardDescription className="text-[8px] sm:text-sm">Latest 10 orders from your store</CardDescription>
           </div>
-          <Link href="/ks7q/orders">
+          <Link href="/mhs258187/orders">
             <Button variant="outline" size="sm" className="text-[10px] sm:text-xs py-1 px-2 h-auto">View All</Button>
           </Link>
         </CardHeader>

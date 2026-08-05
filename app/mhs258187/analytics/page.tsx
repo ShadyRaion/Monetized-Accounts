@@ -130,7 +130,7 @@ const renderPlatformLabel = (props: any) => {
       <Breadcrumb className="mb-2 sm:mb-3 text-[8px] sm:text-xs">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/ks7q" className="text-[8px] sm:text-xs text-white">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href="/mhs258187" className="text-[8px] sm:text-xs text-white">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

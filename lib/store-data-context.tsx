@@ -12,6 +12,7 @@ export interface Account {
   id: string
   platform: "TikTok" | "YouTube"
   type: ProductType
+  region?: "US" | "UK"
   title: string
   followers: string
   followersNum: number
@@ -81,6 +82,7 @@ interface StoreDataContextType {
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
   deleteProduct: (id: string) => Promise<{ ok: boolean; message?: string }>
   toggleProductStock: (id: string) => Promise<void>
+  toggleProductVisibility: (id: string, visible: boolean) => Promise<void>
   
   // Orders
   orders: Order[]
@@ -209,6 +211,7 @@ function productToAccount(product: Product): Account {
     id: product.id,
     platform: product.platform,
     type: product.type,
+    region: product.region,
     title: product.title ?? "",
     followers: product.followers,
     followersNum: parseFollowers(product.followers),
@@ -246,7 +249,8 @@ function mapBackendProduct(product: any): Product {
   return {
     id: product.id,
     platform: product.platform as "TikTok" | "YouTube",
-    type: (product.type ? String(product.type) : "US TikTok Shop") as ProductType,
+    region: product.region as "US" | "UK" | undefined,
+    type: (product.type ? String(product.type) : "Tiktok Shop") as ProductType,
     title: product.title ?? "",
     followers: String(product.followers ?? "0"),
     followersNum: Number(product.followers ?? 0),
@@ -259,7 +263,8 @@ function mapBackendProduct(product: any): Product {
     verified: Number(verificationPrice) === 0,
     verificationPrice,
     transferTime: product.transferTime ?? "Instant",
-    inStock: product.inStock ?? true
+    inStock: product.inStock ?? true,
+    hidden: Boolean(product.hidden)
   }
 }
 
@@ -968,6 +973,30 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Error toggling product stock:", err)
+    }
+  }, [products])
+
+  const toggleProductVisibility = useCallback(async (id: string, visible: boolean) => {
+    try {
+      const product = products.find(p => p.id === id)
+      if (!product) return
+
+      const previousProducts = products
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, hidden: !visible } : p))
+
+      const res = await apiFetch(apiPath(`/products/${id}`), {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ hidden: !visible })
+      })
+
+      if (!res.ok) {
+        const responseText = await res.text().catch(() => "<unable to read response body>")
+        console.error("Failed to toggle product visibility", res.status, responseText)
+        setProducts(previousProducts)
+      }
+    } catch (err) {
+      console.error("Error toggling product visibility:", err)
     }
   }, [products])
 
@@ -2151,6 +2180,7 @@ export function StoreDataProvider({ children }: { children: ReactNode }) {
       updateProduct,
       deleteProduct,
       toggleProductStock,
+      toggleProductVisibility,
       orders,
       addOrder,
       updateOrderStatus,

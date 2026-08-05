@@ -83,7 +83,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const normalizedPathname = pathname?.replace(/\/$/, "") ?? ""
-    const adminBasePath = "/ks7q"
+    const adminBasePath = "/mhs258187"
     const isLoginPage = normalizedPathname === `${adminBasePath}/login`
     const isAdminArea = normalizedPathname.startsWith(adminBasePath) && !isLoginPage
 
@@ -129,7 +129,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     void apiFetch(apiPath('/auth/logout'), { method: 'POST' })
     setUser(null)
     setPendingEmailChange(null)
-    router.replace("/ks7q/login")
+    router.replace("/mhs258187/login")
   }
 
   const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {

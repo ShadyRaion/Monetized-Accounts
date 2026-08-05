@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTable, type Column } from "@/components/admin/data-table"
-import type { Product } from "@/lib/types"
+import type { Product, ProductType } from "@/lib/types"
 import { useStoreData } from "@/lib/store-data-context"
 import { Plus, Search, Trash2, Edit, Package } from "lucide-react"
 import { toast } from "sonner"
@@ -61,11 +61,14 @@ const PRODUCT_TYPES = [
   "YouTube Monetized"
 ] as const
 
+const REGIONS = ["US", "UK"] as const
+
 type ProductFormType = (typeof PRODUCT_TYPES)[number]
 
 type ProductFormData = {
   id: string
   platform: "TikTok" | "YouTube"
+  region?: "US" | "UK"
   type: ProductFormType
   title: string
   followers: string
@@ -89,7 +92,7 @@ interface ProductFormProps {
 
 export default function ProductsPage() {
   const { user, isLoading } = useAdminAuth()
-  const { products, addProduct, updateProduct, deleteProduct, toggleProductStock } = useStoreData()
+  const { products, addProduct, updateProduct, deleteProduct, toggleProductStock, toggleProductVisibility } = useStoreData()
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [platformFilter, setPlatformFilter] = useState<string>("all")
@@ -166,6 +169,7 @@ export default function ProductsPage() {
     const newProduct: Product = {
       id,
       platform: formData.platform,
+      region: formData.region,
       type: formData.type as ProductFormType,
       title: formData.title,
       followers: String(formData.followers || "0"),
@@ -194,6 +198,7 @@ export default function ProductsPage() {
 
     updateProduct(editingProduct.id, {
       platform: formData.platform,
+      region: formData.region,
       type: formData.type as ProductFormType,
       title: formData.title,
       followers: formData.followers,
@@ -255,12 +260,18 @@ export default function ProductsPage() {
     toast.success("Stock status updated")
   }
 
+  const handleToggleVisibility = (productId: string, visible: boolean) => {
+    toggleProductVisibility(productId, visible)
+    toast.success(visible ? "Product visible" : "Product hidden")
+  }
+
   const openEditModal = (product: Product) => {
     setEditingProduct(product)
     setFormData({
       id: product.id,
       platform: product.platform,
-      type: product.type,
+      region: product.region,
+      type: product.type as ProductFormType,
       title: product.title ?? "",
       followers: product.followers,
       price: product.price,
@@ -281,6 +292,7 @@ export default function ProductsPage() {
     setFormData({
       id: "",
       platform: "TikTok",
+      region: undefined,
       type: PRODUCT_TYPES[0],
       title: "",
       followers: "",
@@ -311,6 +323,7 @@ export default function ProductsPage() {
   )
   },
     { key: "type", label: "Type", sortable: true },
+    { key: "region", label: "Region", sortable: true, render: (product) => product.region ?? "-" },
     { key: "followers", label: "Followers", sortable: true },
     {
       key: "price",
@@ -329,9 +342,24 @@ export default function ProductsPage() {
       label: "Status",
       sortable: true,
       render: (product) => (
-        <Badge className={product.inStock ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+        <button
+          type="button"
+          className={product.inStock ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-[11px] font-medium text-green-800" : "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-[11px] font-medium text-red-800"}
+          onClick={() => handleToggleStock(product.id)}
+        >
           {product.inStock ? "In Stock" : "Out of Stock"}
-        </Badge>
+        </button>
+      )
+    },
+    {
+      key: "visible",
+      label: "Visibility",
+      render: (product) => (
+        <Switch
+          checked={!product.hidden}
+          onCheckedChange={(checked) => handleToggleVisibility(product.id, checked)}
+          aria-label={product.hidden ? "Show product" : "Hide product"}
+        />
       )
     },
     {
@@ -339,7 +367,6 @@ export default function ProductsPage() {
       label: "Actions",
       render: (product) => (
         <div className="flex items-center gap-2">
-          <Switch checked={product.inStock} onCheckedChange={() => handleToggleStock(product.id)} />
           <Button variant="ghost" size="icon" onClick={() => openEditModal(product)}>
             <Edit className="h-4 w-4" />
           </Button>
@@ -365,7 +392,7 @@ export default function ProductsPage() {
       <Breadcrumb className="mb-2 sm:mb-3 text-[8px] sm:text-xs">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin" className="text-[8px] sm:text-xs text-white">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href="/mhs258187" className="text-[8px] sm:text-xs text-white">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -417,7 +444,7 @@ export default function ProductsPage() {
               />
             </div>
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-[120px] h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-30 h-7 sm:h-8 text-[10px] sm:text-xs">
                 <SelectValue placeholder="All Platforms" />
               </SelectTrigger>
               <SelectContent>
@@ -427,7 +454,7 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[110px] h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-[27.5] h-7 sm:h-8 text-[10px] sm:text-xs">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -438,7 +465,7 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
             <Select value={stockFilter} onValueChange={setStockFilter}>
-              <SelectTrigger className="w-full sm:w-[110px] h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-[27.5] h-7 sm:h-8 text-[10px] sm:text-xs">
                 <SelectValue placeholder="All Stock" />
               </SelectTrigger>
               <SelectContent>
@@ -528,31 +555,15 @@ export default function ProductsPage() {
 }
 
 interface ProductFormProps {
-  formData: {
-    id: string
-    platform: "TikTok" | "YouTube"
-    type: ProductFormType
-    title: string
-    followers: string
-    price: number
-    originalEnabled: boolean
-    originalPrice: number
-    verificationEnabled: boolean
-    verificationPrice: number
-    description: string
-    features: string
-    badge: string
-    transferTime: string
-    inStock: boolean
-  }
-  setFormData: React.Dispatch<React.SetStateAction<ProductFormProps["formData"]>>
+  formData: ProductFormData
+  setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
   isEdit?: boolean
 }
 
 function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
   return (
     <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="platform">Platform *</Label>
           <Select value={formData.platform} onValueChange={(v) => setFormData({ ...formData, platform: v as "TikTok" | "YouTube" })}>
@@ -565,18 +576,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="title">Title *</Label>
-          <Input
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="e.g. Viral TikTok Shop Account"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 xl:col-span-2">
           <Label htmlFor="type">Type *</Label>
           <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as ProductFormType })}>
             <SelectTrigger>
@@ -592,6 +592,33 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
           </Select>
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="region">Region</Label>
+          <Select value={formData.region ?? "none"} onValueChange={(v) => setFormData({ ...formData, region: v === "none" ? undefined : (v as "US" | "UK") })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select region" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {REGIONS.map((regionOption) => (
+                <SelectItem key={regionOption} value={regionOption}>
+                  {regionOption}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="title">Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder="e.g. Viral TikTok Shop Account"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="followers">Followers</Label>
           <Input
             id="followers"
@@ -601,8 +628,8 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-2 max-w-sm">
           <Label htmlFor="price">Sale Price ($) *</Label>
           <Input
             id="price"
@@ -611,7 +638,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
             onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 max-w-sm">
           <div className="flex items-center gap-3">
             <Checkbox
               id="originalEnabled"
@@ -635,9 +662,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
             onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) })}
           />
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 max-w-sm">
           <div className="flex items-center gap-3">
             <Checkbox
               id="verificationEnabled"
@@ -716,7 +741,7 @@ function ProductForm({ formData, setFormData, isEdit }: ProductFormProps) {
           checked={formData.inStock}
           onCheckedChange={(checked) => setFormData({ ...formData, inStock: checked })}
         />
-        <Label htmlFor="inStock">Visible</Label>
+        <Label htmlFor="inStock">In Stock</Label>
       </div>
     </div>
   )

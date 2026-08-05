@@ -8,11 +8,13 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatPrice } from "@/lib/data"
 import { formatFollowers } from "@/lib/utils"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
 import { useStoreData } from "@/lib/store-data-context"
+import { getVariantSelection } from "@/lib/product-variants"
 import {
   Users,
   Clock,
@@ -20,7 +22,6 @@ import {
   Shield,
   ArrowLeft,
   ShoppingCart,
-  AlertCircle,
   Heart,
   Plus,
   Minus
@@ -30,17 +31,34 @@ import { useUserAuth } from "@/lib/user-auth-context"
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params)
   const router = useRouter()
-  const { addToCart, items, setBuyNowItem, updateQuantity, toggleBuyNowVerification, setBuyNowVerificationCount, buyNowItem } = useCart()
+  const { addToCart, items, setBuyNowItem, updateQuantity } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [buyNowAddVerification, setBuyNowAddVerification] = useState(false)
   const [buyNowVerificationCountLocal, setBuyNowVerificationCountLocal] = useState(0)
-  // Local per-item verification mirrors cart item behavior: when quantity === 1 show single checkbox, when >1 show three-option controls
-  const singleItemVerificationUI = quantity === 1
+  const [selectedRegion, setSelectedRegion] = useState<"all" | "US" | "UK">("all")
+  const [selectedFollowers, setSelectedFollowers] = useState<string>("all")
   const { settings } = useStoreSettings()
   const { accounts, products } = useStoreData()
   const { isAuthenticated, addToFavorites, removeFromFavorites, isFavorite, redirectToLogin } = useUserAuth()
   
   const account = accounts.find(a => a.id === id)
+  const baseAccount = account ?? accounts[0]
+  const variantSelection = React.useMemo(() => {
+    if (!baseAccount) return { activeVariant: null, variants: [], availableRegions: [], availableFollowers: [] as string[] }
+    return getVariantSelection(accounts, baseAccount, { region: selectedRegion, followers: selectedFollowers })
+  }, [accounts, baseAccount, selectedRegion, selectedFollowers])
+  const activeAccount = variantSelection.activeVariant ?? baseAccount ?? null
+
+  React.useEffect(() => {
+    if (!activeAccount) return
+    setSelectedRegion(activeAccount.region ?? "all")
+    setSelectedFollowers(activeAccount.followers)
+  }, [activeAccount?.id])
+
+  React.useEffect(() => {
+    if (!activeAccount || activeAccount.id === id) return
+    router.replace(`/product/${activeAccount.id}`, { scroll: false })
+  }, [activeAccount?.id, id, router])
   
   // Show loading if products are empty (initial load)
   if (products.length === 0) {
@@ -51,15 +69,15 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     )
   }
   
-  if (!account) {
+  if (!activeAccount) {
     notFound()
   }
 
-  const isInCart = items.some(item => item.account.id === account.id)
-  const hasVerificationFee = account.verificationPrice > 0
+  const isInCart = items.some(item => item.account.id === activeAccount.id)
+  const hasVerificationFee = activeAccount.verificationPrice > 0
 
-  const sameTypeAccounts = accounts.filter(a => a.type === account.type && a.id !== account.id)
-  const samePlatformAccounts = accounts.filter(a => a.platform === account.platform && a.id !== account.id)
+  const sameTypeAccounts = accounts.filter(a => a.type === activeAccount.type && a.id !== activeAccount.id)
+  const samePlatformAccounts = accounts.filter(a => a.platform === activeAccount.platform && a.id !== activeAccount.id)
 
   const relatedAccounts = [
     ...sameTypeAccounts.slice(0, 3),
@@ -83,9 +101,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-12">
             <div>
               <div className="bg-black rounded-2xl sm:rounded-3xl p-4 sm:p-8 mb-4 sm:mb-6 relative overflow-hidden">
-                {account.badge && (
-                  <Badge className={`${account.badgeColor} absolute top-3 sm:top-6 right-14 sm:right-20 text-xs sm:text-sm`}>
-                    {account.badge}
+                {activeAccount.badge && (
+                  <Badge className={`${activeAccount.badgeColor} absolute top-3 sm:top-6 right-14 sm:right-20 text-xs sm:text-sm`}>
+                    {activeAccount.badge}
                   </Badge>
                 )}
                 {/* Favorite Heart Button */}
@@ -97,22 +115,22 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       redirectToLogin()
                       return
                     }
-                    if (isFavorite(account.id)) {
-                      removeFromFavorites(account.id)
+                    if (isFavorite(activeAccount.id)) {
+                      removeFromFavorites(activeAccount.id)
                     } else {
-                      addToFavorites(account.id)
+                      addToFavorites(activeAccount.id)
                     }
                   }}
                 >
                   <Heart 
-                    className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-white'}`}
+                    className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isFavorite(activeAccount.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-white'}`} 
                   />
                 </button>
-                <div className="text-[#25F4EE] text-[10px] sm:text-xs font-medium mb-2">{account.type}</div>
+                <div className="text-[#25F4EE] text-[10px] sm:text-xs font-medium mb-2">{activeAccount.type}</div>
                 <h1 className="text-[1.05rem] sm:text-[1.6rem] md:text-[2.2rem] font-bold text-white mb-3 sm:mb-4">
-                  {account.title || account.platform}
+                  {activeAccount.title || activeAccount.platform}
                 </h1>
-                <p className="text-gray-400 text-xs sm:text-base md:text-lg">{account.description}</p>
+                <p className="text-gray-400 text-xs sm:text-base md:text-lg">{activeAccount.description}</p>
                 
                 <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#FE2C55]/20 rounded-full blur-3xl" />
                 <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#25F4EE]/20 rounded-full blur-3xl" />
@@ -121,12 +139,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="bg-gray-50 rounded-lg sm:rounded-2xl p-3 sm:p-4 text-center">
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2" style={{ color: settings.primaryColor }} />
-                  <div className="text-lg sm:text-2xl font-bold text-black">{formatFollowers(account.followers)}</div>
+                  <div className="text-lg sm:text-2xl font-bold text-black">{formatFollowers(activeAccount.followers)}</div>
                   <div className="text-xs sm:text-sm text-gray-500">Followers</div>
                 </div>
                 <div className="bg-gray-50 rounded-lg sm:rounded-2xl p-3 sm:p-4 text-center">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-[#25F4EE] mx-auto mb-1 sm:mb-2" />
-                  <div className="text-lg sm:text-2xl font-bold text-black">{account.transferTime}</div>
+                  <div className="text-lg sm:text-2xl font-bold text-black">{activeAccount.transferTime}</div>
                   <div className="text-xs sm:text-sm text-gray-500">Transfer</div>
                 </div>
               </div>
@@ -138,16 +156,16 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   <div>
                     <span className="text-gray-500 text-xs sm:text-sm">Price</span>
                     <div className="flex items-end gap-3 mt-1">
-                      <div className="text-2xl sm:text-4xl font-bold text-black">{formatPrice(account.price)}</div>
-                      {account.originalPrice && account.originalPrice > account.price ? (
-                        <div className="text-sm font-medium text-red-500 line-through">{formatPrice(account.originalPrice)}</div>
+                      <div className="text-2xl sm:text-4xl font-bold text-black">{formatPrice(activeAccount.price)}</div>
+                      {activeAccount.originalPrice && activeAccount.originalPrice > activeAccount.price ? (
+                        <div className="text-sm font-medium text-red-500 line-through">{formatPrice(activeAccount.originalPrice)}</div>
                       ) : null}
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  {account.features.map((feature, index) => (
+                  {activeAccount.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-[#25F4EE]" />
                       <span className="text-gray-700">{feature}</span>
@@ -179,7 +197,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       </button>
                     </div>
                     <span className="text-lg font-semibold text-gray-700">
-                      {formatPrice(account.price * quantity)} total
+                      {formatPrice(activeAccount.price * quantity)} total
                     </span>
                   </div>
                 </div>
@@ -188,7 +206,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <div className="flex items-center gap-2 text-blue-600 font-medium mb-3">
                       <Shield className="w-4 h-4" />
-                      <span>Add Verification (+${account.verificationPrice} per item)</span>
+                      <span>Add Verification (+${activeAccount.verificationPrice} per item)</span>
                     </div>
                       <div className="flex items-center gap-2">
                         <label className="flex items-center gap-3 cursor-pointer">
@@ -239,23 +257,68 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   </div>
                 )}
 
+                <div className="mb-6 grid gap-3">
+                  {variantSelection.availableRegions.length > 1 && (
+                    <div className="flex flex-col gap-3">
+                      <span className="text-sm font-medium text-gray-700">Region</span>
+                      <div className="flex flex-wrap gap-2">
+                        {variantSelection.availableRegions.map((region) => (
+                          <button
+                            key={region}
+                            type="button"
+                            onClick={() => setSelectedRegion(region)}
+                            className={`rounded-full px-3 py-2 text-sm font-medium transition ${selectedRegion === region ? 'bg-[#FE2C55] text-white' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-100'}`}
+                          >
+                            {region}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {variantSelection.availableFollowers.length > 1 && (
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-gray-700" htmlFor="followers-select">Followers</label>
+                      <Select value={selectedFollowers} onValueChange={(value) => setSelectedFollowers(value)}>
+                        <SelectTrigger
+                          id="followers-select"
+                          className="w-28 rounded-lg border border-gray-200 bg-white text-sm"
+                          size="sm"
+                        >
+                          <SelectValue placeholder={formatFollowers(activeAccount.followers)} />
+                        </SelectTrigger>
+                        <SelectContent className="min-w-28 rounded-xl border border-gray-200 bg-white shadow-lg">
+                          {variantSelection.availableFollowers.map((followers) => (
+                            <SelectItem
+                              key={followers}
+                              value={followers}
+                              className="data-state=checked:bg-[#FE2C55] data-state=checked:text-white data-highlighted:bg-gray-100"
+                            >
+                              {formatFollowers(followers)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-3">
                   <Button 
                     className="flex-1 rounded-full text-lg py-6"
                     style={{ 
-                      backgroundColor: account.inStock ? settings.primaryColor : '#9CA3AF',
+                      backgroundColor: activeAccount.inStock ? settings.primaryColor : '#9CA3AF',
                       color: 'white',
-                      cursor: account.inStock ? 'pointer' : 'not-allowed'
+                      cursor: activeAccount.inStock ? 'pointer' : 'not-allowed'
                     }}
-                    disabled={!account.inStock}
+                    disabled={!activeAccount.inStock}
                     onClick={() => {
-                      if (!account.inStock) return
+                      if (!activeAccount.inStock) return
                       const verificationCount = buyNowAddVerification ? buyNowVerificationCountLocal : 0
-                      setBuyNowItem(account, quantity, verificationCount)
+                      setBuyNowItem(activeAccount, quantity, verificationCount)
                       router.push('/checkout?buyNow=true')
                     }}
                   >
-                    {account.inStock ? `Buy Now - ${formatPrice(account.price * quantity + (buyNowAddVerification ? account.verificationPrice * buyNowVerificationCountLocal : 0))}` : 'Out of Stock'}
+                    {activeAccount.inStock ? `Buy Now - ${formatPrice(activeAccount.price * quantity + (buyNowAddVerification ? activeAccount.verificationPrice * buyNowVerificationCountLocal : 0))}` : 'Out of Stock'}
                   </Button>
                   <Button 
                     className="rounded-full h-auto px-4"
@@ -265,13 +328,13 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       border: isInCart ? 'none' : `2px solid ${settings.primaryColor}`
                     }}
                     onClick={() => {
-                      addToCart(account)
+                      addToCart(activeAccount)
                       // Update quantity after adding to cart
                       setTimeout(() => {
-                        updateQuantity(account.id, quantity)
+                        updateQuantity(activeAccount.id, quantity)
                       }, 50)
                     }}
-                    disabled={isInCart || !account.inStock}
+                    disabled={isInCart || !activeAccount.inStock}
                   >
                     {isInCart ? <CheckCircle className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
                   </Button>

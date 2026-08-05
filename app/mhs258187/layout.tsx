@@ -11,7 +11,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const isLoginPage = pathname === "/ks7q/login"
+  const isLoginPage = pathname === "/mhs258187/login"
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (

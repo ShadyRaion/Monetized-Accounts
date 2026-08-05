@@ -1,12 +1,17 @@
 // Type definitions for backend integration
 
 export type ProductType =
-  | "Monetized Tiktok"
-  | "US Shop Affiliate"
-  | "UK Shop Affiliate"
+  | "Tiktok Monetized"
+  | "Shop Affiliate"
+  | "Tiktok Shop"
+  | "Non-TTS/Affiliate"
+  | "Youtube Aged"
+  | "Youtube Monetized"
   | "US TikTok Shop"
   | "UK TikTok Shop"
-  | "Non-TTS/Affiliate"
+  | "US Shop Affiliate"
+  | "UK Shop Affiliate"
+  | "Monetized Tiktok"
   | "YouTube Aged"
   | "YouTube Monetized"
 
@@ -14,6 +19,7 @@ export interface Product {
   id: string
   platform: "TikTok" | "YouTube"
   type: ProductType
+  region?: "US" | "UK"
   title?: string
   followers: string
   followersNum?: number
@@ -25,6 +31,7 @@ export interface Product {
   features: string[]
   verified?: boolean
   verificationPrice?: number
+  hidden?: boolean
   transferTime: string
   inStock: boolean
 }

@@ -175,6 +175,7 @@ const handleRequest = async (req: Request) => {
   expressRes.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
 
   try {
+    console.log(`[api] raw request url=${req.url} method=${req.method}`)
     console.log(`[api] start ${expressReq.method} ${expressReq.path}`)
   } catch (e) {
     /* ignore logging errors */

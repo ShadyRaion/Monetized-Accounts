@@ -94,6 +94,7 @@ function normalizeFeatures(value: any) {
 function buildProductData(body: any) {
   const {
     platform,
+    region,
     type,
     title,
     followers,
@@ -105,12 +106,14 @@ function buildProductData(body: any) {
     features,
     badge,
     transferTime,
-    inStock
+    inStock,
+    hidden
   } = body
 
   const data: any = {}
 
   if (platform !== undefined) data.platform = platform
+  if (region !== undefined) data.region = region || null
   if (type !== undefined) data.type = type
   if (followers !== undefined) {
     const parsed = parseFollowersValue(followers)
@@ -139,6 +142,10 @@ function buildProductData(body: any) {
   if (transferTime !== undefined) data.transferTime = transferTime
   if (inStock !== undefined) {
     data.inStock = Boolean(inStock)
+  }
+
+  if (hidden !== undefined) {
+    data.hidden = Boolean(hidden)
   }
 
   // Final safety: ensure followers is a finite integer before sending to Prisma

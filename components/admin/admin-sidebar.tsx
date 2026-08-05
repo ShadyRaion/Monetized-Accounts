@@ -49,7 +49,7 @@ export function AdminSidebar({ isCollapsed, onCollapsedChange }: AdminSidebarPro
   const hasUnreadMessages = tickets.some(t => t.status === "open" || t.status === "opened")
   const showUpdateIndicator = hasOpenTickets
 
-  const adminBasePath = "/ks7q"
+  const adminBasePath = "/mhs258187"
   const navItems: NavItem[] = [
     { label: "Dashboard", href: adminBasePath, icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: "Products", href: `${adminBasePath}/products`, icon: <Package className="h-5 w-5" /> },
