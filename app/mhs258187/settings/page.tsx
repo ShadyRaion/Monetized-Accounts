@@ -184,7 +184,6 @@ export default function SettingsPage() {
   const [sessionTimeout, setSessionTimeout] = useState("30")
   // New crypto currency modal state
   const [newCryptoName, setNewCryptoName] = useState("")
-  const [newCryptoSymbol, setNewCryptoSymbol] = useState("")
   const [newNetworkName, setNewNetworkName] = useState("")
   const [newNetworkAddress, setNewNetworkAddress] = useState("")
   const [selectedCryptoIndex, setSelectedCryptoIndex] = useState<number | null>(null)
@@ -268,18 +267,26 @@ export default function SettingsPage() {
     })
   }
   
+  const deriveSymbolFromName = (name: string) => {
+    const cleaned = name.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+    if (!cleaned) return ""
+    if (cleaned.length <= 3) return cleaned
+    return cleaned.slice(0, 3)
+  }
+
   const addCryptoCurrency = () => {
-    if (!newCryptoName || !newCryptoSymbol) return
+    if (!newCryptoName) return
     const newCurrency: CryptoCurrency = {
       name: newCryptoName,
-      symbol: newCryptoSymbol.toUpperCase(),
+      symbol: deriveSymbolFromName(newCryptoName),
       networks: []
     }
     updatePaymentSettings({
       cryptoCurrencies: [...storeSettings.paymentSettings.cryptoCurrencies, newCurrency]
     })
     setNewCryptoName("")
-    setNewCryptoSymbol("")
+    setNewNetworkName("")
+    setNewNetworkAddress("")
   }
   
   const removeCryptoCurrency = (index: number) => {
@@ -1206,7 +1213,7 @@ export default function SettingsPage() {
                       <div className="space-y-2 sm:space-y-3 pt-2 sm:pt-3 border-t border-zinc-700">
                         {/* Add new cryptocurrency */}
                         <div className="p-2 sm:p-3 border border-dashed border-zinc-700 rounded space-y-2">
-                          <p className="text-[8px] sm:text-xs text-zinc-400 font-medium">Add Crypto (Name & Symbol required)</p>
+                          <p className="text-[8px] sm:text-xs text-zinc-400 font-medium">Add Crypto (Name required)</p>
                           <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                             <Input
                               value={newCryptoName}
@@ -1214,15 +1221,12 @@ export default function SettingsPage() {
                               placeholder="Name (Required)"
                               className="bg-zinc-800 border-zinc-700 text-white h-7 text-[9px]"
                             />
-                            <Input
-                              value={newCryptoSymbol}
-                              onChange={(e) => setNewCryptoSymbol(e.target.value)}
-                              placeholder="Symbol (Required)"
-                              className="bg-zinc-800 border-zinc-700 text-white w-full sm:w-24 h-7 text-[9px]"
-                            />
+                            <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-2 text-[9px] text-zinc-400 h-7 sm:w-24">
+                              <span className="truncate">Symbol: {deriveSymbolFromName(newCryptoName) || "—"}</span>
+                            </div>
                             <Button
                               onClick={addCryptoCurrency}
-                              disabled={!newCryptoName || !newCryptoSymbol}
+                              disabled={!newCryptoName}
                               className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-zinc-600 text-black h-7 px-2 text-[9px]"
                             >
                               <Plus className="h-3 w-3" />
