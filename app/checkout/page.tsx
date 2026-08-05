@@ -165,9 +165,6 @@ function CheckoutPageContent() {
       if (parsed?.showPendingConfirmation) {
         setShowPendingConfirmation(true)
       }
-      if (parsed?.paymentMethod) {
-        setPaymentMethod(parsed.paymentMethod)
-      }
       if (parsed?.selectedCrypto) {
         setSelectedCrypto(parsed.selectedCrypto)
       }
@@ -278,9 +275,6 @@ function CheckoutPageContent() {
       }))
     }
 
-    if (pendingAction.data.paymentMethod) {
-      setPaymentMethod(pendingAction.data.paymentMethod)
-    }
     if (pendingAction.data.selectedCrypto) {
       setSelectedCrypto(pendingAction.data.selectedCrypto)
     }
