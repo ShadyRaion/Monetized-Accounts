@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Header } from "@/components/header"
 import { MarqueeBanner } from "@/components/marquee-banner"
 import { Hero } from "@/components/hero"
@@ -9,6 +10,11 @@ import { Stats } from "@/components/stats"
 import { LimitedStock } from "@/components/limited-stock"
 import { Affiliate } from "@/components/affiliate"
 import { Footer } from "@/components/footer"
+
+export const metadata: Metadata = {
+  title: "MonetizedHub | Buy Monetized US TikTok Accounts",
+  description: "Premium organic, monetized TikTok accounts, TikTok Shop seller/creator accounts, YouTube channels, and affiliate-ready accounts."
+}
 
 export default function Home() {
   return (

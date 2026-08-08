@@ -2,15 +2,11 @@
 
 export type ProductType =
   | "Tiktok Monetized"
-  | "Shop Affiliate"
-  | "Tiktok Shop"
+  | "Tiktok Shop (Creator)"
+  | "Tiktok Shop (Seller)"
   | "Non-TTS/Affiliate"
-  | "Youtube Aged"
+  | "Aged Youtube"
   | "Youtube Monetized"
-  | "US TikTok Shop"
-  | "UK TikTok Shop"
-  | "US Shop Affiliate"
-  | "UK Shop Affiliate"
   | "Monetized Tiktok"
   | "YouTube Aged"
   | "YouTube Monetized"

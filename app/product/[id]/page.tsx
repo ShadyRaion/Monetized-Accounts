@@ -27,6 +27,7 @@ import {
   Minus
 } from "lucide-react"
 import { useUserAuth } from "@/lib/user-auth-context"
+import { getProductTypeDetailsHtml } from "@/lib/product-type-details"
 
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params)
@@ -37,6 +38,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [buyNowVerificationCountLocal, setBuyNowVerificationCountLocal] = useState(0)
   const [selectedRegion, setSelectedRegion] = useState<"all" | "US" | "UK">("all")
   const [selectedFollowers, setSelectedFollowers] = useState<string>("all")
+  const [detailsExpanded, setDetailsExpanded] = useState(false)
   const { settings } = useStoreSettings()
   const { accounts, products } = useStoreData()
   const { isAuthenticated, addToFavorites, removeFromFavorites, isFavorite, redirectToLogin } = useUserAuth()
@@ -83,6 +85,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     ...sameTypeAccounts.slice(0, 3),
     ...samePlatformAccounts.filter(a => !sameTypeAccounts.some(s => s.id === a.id)).slice(0, Math.max(0, 3 - sameTypeAccounts.length))
   ].slice(0, 3)
+
+  const detailsHtml = getProductTypeDetailsHtml(activeAccount.type, activeAccount.region)
 
   return (
     <div className="min-h-screen bg-white">
@@ -148,6 +152,19 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   <div className="text-xs sm:text-sm text-gray-500">Transfer</div>
                 </div>
               </div>
+
+              <section className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                <div className={`${detailsExpanded ? '' : 'line-clamp-4'} prose prose-sm max-w-none product-type-details-wrap`}>
+                  <div dangerouslySetInnerHTML={{ __html: detailsHtml }} />
+                </div>
+                <button
+                  type="button"
+                  className="mt-3 text-sm font-semibold text-[#FE2C55] hover:text-[#c71a3d] underline-offset-2 hover:underline"
+                  onClick={() => setDetailsExpanded(value => !value)}
+                >
+                  {detailsExpanded ? 'Show less' : 'Read more..'}
+                </button>
+              </section>
             </div>
             
             <div>

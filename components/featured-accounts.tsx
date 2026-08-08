@@ -11,6 +11,116 @@ import { useStoreData } from "@/lib/store-data-context"
 import { Users, ShoppingCart, CheckCircle, AlertCircle, Heart } from "lucide-react"
 import { useUserAuth } from "@/lib/user-auth-context"
 
+const FEATURED_PRIORITY_TYPES = [
+  "Tiktok Shop (Creator)",
+  "Tiktok Shop (Seller)",
+  "Tiktok Monetized",
+  "Youtube Monetized"
+]
+
+export function selectFeaturedAccounts(accounts: Array<{ type: string; price: number; id: string; region?: string }>) {
+  if (!accounts.length) {
+    return []
+  }
+
+  const groups = new Map<string, Array<{ type: string; price: number; id: string; region?: string }>>()
+
+  for (const account of accounts) {
+    if (!groups.has(account.type)) {
+      groups.set(account.type, [])
+    }
+
+    groups.get(account.type)?.push(account)
+  }
+
+  const regionPriority = (region?: string) => {
+    const normalized = String(region ?? '').toUpperCase()
+
+    if (normalized === 'US') {
+      return 0
+    }
+
+    if (normalized === 'UK') {
+      return 1
+    }
+
+    return 2
+  }
+
+  for (const group of groups.values()) {
+    group.sort((a, b) => {
+      const regionDelta = regionPriority(a.region) - regionPriority(b.region)
+      if (regionDelta !== 0) {
+        return regionDelta
+      }
+
+      return a.price - b.price
+    })
+  }
+
+  const orderedTypes = [
+    ...FEATURED_PRIORITY_TYPES.filter((type) => groups.has(type)),
+    ...Array.from(groups.keys()).filter((type) => !FEATURED_PRIORITY_TYPES.includes(type))
+  ]
+
+  const selected: Array<{ type: string; price: number; id: string; region?: string }> = []
+  const selectedTypeCursor = new Map<string, number>()
+
+  for (const type of orderedTypes) {
+    const group = groups.get(type)
+    if (!group || group.length === 0) {
+      continue
+    }
+
+    const nextIndex = selectedTypeCursor.get(type) ?? 0
+    const nextAccount = group[nextIndex]
+
+    if (!nextAccount) {
+      continue
+    }
+
+    selected.push(nextAccount)
+    selectedTypeCursor.set(type, nextIndex + 1)
+
+    if (selected.length >= 4) {
+      break
+    }
+  }
+
+  if (selected.length < 4) {
+    const candidateTypes = Array.from(new Set(selected.map((account) => account.type)))
+
+    while (selected.length < 4) {
+      const startLength = selected.length
+
+      for (const type of candidateTypes) {
+        const group = groups.get(type)
+        if (!group || group.length === 0) {
+          continue
+        }
+
+        const nextIndex = selectedTypeCursor.get(type) ?? 0
+        const nextAccount = group[nextIndex]
+
+        if (nextAccount) {
+          selected.push(nextAccount)
+          selectedTypeCursor.set(type, nextIndex + 1)
+        }
+
+        if (selected.length >= 4) {
+          break
+        }
+      }
+
+      if (selected.length === startLength) {
+        break
+      }
+    }
+  }
+
+  return selected.slice(0, 4)
+}
+
 function PlatformCardIcon({ platform }: { platform: string }) {
   if (platform === "YouTube") {
     return (
@@ -32,7 +142,7 @@ export function FeaturedAccounts() {
   const { addToCart, items } = useCart()
   const { accounts } = useStoreData()
   const { isAuthenticated, addToFavorites, removeFromFavorites, isFavorite, redirectToLogin } = useUserAuth()
-  const featuredAccounts = accounts.slice(0, 4)
+  const featuredAccounts = useMemo(() => selectFeaturedAccounts(accounts), [accounts])
   const cartItemIds = useMemo(() => new Set(items.map(item => item.account.id)), [items])
   const isInCart = (id: string) => cartItemIds.has(id)
 

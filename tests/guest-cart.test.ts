@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readGuestCart, writeGuestCart, mergeGuestCartItems, GUEST_CART_TTL_MS } from '../lib/guest-cart'
+import { selectFeaturedAccounts } from '../components/featured-accounts'
 
 function createLocalStorageMock() {
   let store = new Map<string, string>()
@@ -33,6 +34,54 @@ if (typeof globalThis.localStorage === 'undefined') {
 
 test.beforeEach(() => {
   globalThis.localStorage.clear()
+})
+
+test('selectFeaturedAccounts takes the cheapest account per requested featured type before filling any gaps', () => {
+  const featured = selectFeaturedAccounts([
+    { id: 'creator-2', type: 'Tiktok Shop (Creator)', price: 75 },
+    { id: 'creator-1', type: 'Tiktok Shop (Creator)', price: 50 },
+    { id: 'seller-2', type: 'Tiktok Shop (Seller)', price: 150 },
+    { id: 'seller-1', type: 'Tiktok Shop (Seller)', price: 90 },
+    { id: 'monetized-1', type: 'Tiktok Monetized', price: 100 },
+    { id: 'video-2', type: 'Youtube Monetized', price: 200 },
+    { id: 'video-1', type: 'Youtube Monetized', price: 120 }
+  ] as any)
+
+  assert.equal(featured.length, 4)
+  assert.deepEqual(featured.map(account => account.type), [
+    'Tiktok Shop (Creator)',
+    'Tiktok Shop (Seller)',
+    'Tiktok Monetized',
+    'Youtube Monetized'
+  ])
+  assert.deepEqual(featured.map(account => account.id), ['creator-1', 'seller-1', 'monetized-1', 'video-1'])
+})
+
+test('selectFeaturedAccounts prefers US over UK for the same type and price band', () => {
+  const featured = selectFeaturedAccounts([
+    { id: 'creator-uk', type: 'Tiktok Shop (Creator)', price: 40, region: 'UK' },
+    { id: 'creator-us', type: 'Tiktok Shop (Creator)', price: 45, region: 'US' },
+    { id: 'seller-uk', type: 'Tiktok Shop (Seller)', price: 45, region: 'UK' },
+    { id: 'seller-us', type: 'Tiktok Shop (Seller)', price: 40, region: 'US' }
+  ] as any)
+
+  assert.equal(featured.length, 4)
+  assert.deepEqual(featured.map(account => account.id), ['creator-us', 'seller-us', 'creator-uk', 'seller-uk'])
+})
+
+test('selectFeaturedAccounts falls back from the requested premium family to the remaining catalog when a priority type is unavailable', () => {
+  const featured = selectFeaturedAccounts([
+    { id: 'legacy-1', type: 'Non-TTS/Affiliate', price: 30 },
+    { id: 'legacy-2', type: 'Aged Youtube', price: 50 },
+    { id: 'creator-1', type: 'Tiktok Shop (Creator)', price: 45 }
+  ] as any)
+
+  assert.equal(featured.length, 3)
+  assert.deepEqual(featured.map(account => account.type), [
+    'Tiktok Shop (Creator)',
+    'Non-TTS/Affiliate',
+    'Aged Youtube'
+  ])
 })
 
 test('readGuestCart returns empty array for expired guest carts', () => {

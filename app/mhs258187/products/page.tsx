@@ -52,10 +52,8 @@ import {
 
 const PRODUCT_TYPES = [
   "Monetized Tiktok",
-  "US Shop Affiliate",
-  "UK Shop Affiliate",
-  "US TikTok Shop",
-  "UK TikTok Shop",
+  "Tiktok Shop (Creator)",
+  "Tiktok Shop (Seller)",
   "Non-TTS/Affiliate",
   "YouTube Aged",
   "YouTube Monetized"
@@ -434,17 +432,17 @@ export default function ProductsPage() {
       <Card className="mb-3">
         <CardContent className="p-1.5 sm:pt-3 sm:px-3">
           <div className="flex flex-col gap-1 sm:gap-3 md:flex-row md:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative flex-1 sm:flex-[1.2] max-w-full sm:max-w-70">
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-7 h-7 sm:h-8 text-[10px] sm:text-xs"
+                className="pl-8 h-8 sm:h-9 text-[11px] sm:text-xs"
               />
             </div>
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-30 h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-37.5 h-8 sm:h-9 text-[11px] sm:text-xs">
                 <SelectValue placeholder="All Platforms" />
               </SelectTrigger>
               <SelectContent>
@@ -454,7 +452,7 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[27.5] h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-42.5 h-8 sm:h-9 text-[11px] sm:text-xs">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -465,7 +463,7 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
             <Select value={stockFilter} onValueChange={setStockFilter}>
-              <SelectTrigger className="w-full sm:w-[27.5] h-7 sm:h-8 text-[10px] sm:text-xs">
+              <SelectTrigger className="w-full sm:w-37.5 h-8 sm:h-9 text-[11px] sm:text-xs">
                 <SelectValue placeholder="All Stock" />
               </SelectTrigger>
               <SelectContent>

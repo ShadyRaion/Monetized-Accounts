@@ -71,7 +71,7 @@ export default function FavoritesPage() {
     addToCart({
       id: product.id,
       platform: product.platform as "TikTok" | "YouTube",
-      type: product.type as "US TikTok Shop" | "UK TikTok Shop" | "Non-TTS/Affiliate" | "YouTube Aged" | "YouTube Monetized",
+      type: product.type as "Tiktok Shop (Seller)" | "Tiktok Shop (Creator)" | "Non-TTS/Affiliate" | "Aged Youtube" | "Youtube Monetized",
       title: product.title || product.platform || "",
       followers: product.followers,
       followersNum: parseInt(product.followers) || 0,

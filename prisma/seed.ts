@@ -1,7 +1,107 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { buildProductMetadata } from './product-metadata.ts'
 
 const prisma = new PrismaClient()
+  if (followers >= 1000) {
+    const k = followers / 1000
+    return Number.isInteger(k) ? `${k}K` : `${k.toFixed(1)}K`
+  }
+  return `${followers}`
+}
+
+function buildProductMetadata(product: { platform: string; region?: string; type: string; followers: number }) {
+  const followerLabel = formatFollowersLabel(product.followers)
+  const followerText = product.followers >= 1000 ? `over ${followerLabel}` : `${followerLabel}`
+  const regionLabel = product.region ? `${product.region} ` : ""
+  const regionDescription = product.region ? `${product.region} region` : "global audience"
+
+  switch (product.type) {
+    case 'Tiktok Shop (Seller)':
+    case 'Tiktok Shop':
+      return {
+        description: `American TikTok Shop seller account with ${followerText} real, 100% organic followers. Optimized for shop sellers who want a ready-made storefront, LIVE shopping, and direct conversion traffic.`,
+        features: [
+          'TikTok Shop enabled',
+          `${regionDescription} account`,
+          '100% organic followers',
+          'Shop selling ready',
+          'LIVE shopping accessible',
+          'Original email included'
+        ]
+      }
+    case 'Tiktok Shop (Creator)':
+    case 'Shop Affiliate':
+      return {
+        description: `TikTok Shop creator account with ${followerText} real, organic followers. Built for affiliate promotion and product discovery through a creator sales funnel.`,
+        features: [
+          'Shop Affiliate ready',
+          `${regionDescription} creator audience`,
+          '100% organic followers',
+          'Affiliate link in bio ready',
+          'Product promotion optimized',
+          'Original email included'
+        ]
+      }
+    case 'Tiktok Monetized':
+      return {
+        description: `Pre-monetized TikTok creator account with ${followerText} real followers. Creator rewards is enabled so you can start earning from your first upload and grow revenue immediately.`,
+        features: [
+          'Creator Rewards enabled',
+          'Monetization ready',
+          '100% organic followers',
+          'Bio link available',
+          'LIVE access unlocked',
+          'Original email included'
+        ]
+      }
+    case 'Non-TTS/Affiliate':
+      return {
+        description: `TikTok affiliate creator account with ${followerText} real followers. Perfect for adding affiliate links in bio, hosting lives, and monetizing content through sponsorships and direct conversions.`,
+        features: [
+          'Affiliate link enabled',
+          'LIVE access unlocked',
+          '100% organic followers',
+          `${regionDescription} audience`,
+          'Bio link ready',
+          'Original email included'
+        ]
+      }
+    case 'Youtube Monetized':
+      return {
+        description: `Pre-monetized YouTube channel with ${followerText} subscribers and Partner Program enabled. Ad revenue is unlocked and the channel is ready to earn instantly.`,
+        features: [
+          'YouTube Partner Program enabled',
+          `${followerLabel}+ subscribers`,
+          'Ad revenue ready',
+          'Clean channel standing',
+          'Upload-ready',
+          'Original email included'
+        ]
+      }
+    case 'Youtube Aged':
+      return {
+        description: `Aged YouTube channel with established history and clean standing. This AED-style channel is ideal for creators who want a trusted foundation for new growth and future monetization.`,
+        features: [
+          'Aged channel',
+          'Clean history',
+          'Monetization eligible',
+          'Upload-ready',
+          'Original email included'
+        ]
+      }
+    default:
+      return {
+        description: `Established ${product.type} account with ${followerText} real followers, ready to be customized and monetized for your niche.`,
+        features: [
+          `${regionDescription} audience`,
+          '100% organic followers',
+          'Ready for transfer',
+          'Original email included'
+        ]
+      }
+  }
+}
 
 async function main(){
   // Ensure admin user exists but remove all non-admin users and all product/order/customer data.
@@ -36,30 +136,30 @@ async function main(){
   }
 
   const products = [
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 10K', followers: 10000, price: 250 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 10K', followers: 10000, price: 250 },
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 20K', followers: 20000, price: 320 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 20K', followers: 20000, price: 320 },
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 30K', followers: 30000, price: 380 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 30K', followers: 30000, price: 380 },
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 40K', followers: 40000, price: 440 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 40K', followers: 40000, price: 440 },
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 50K', followers: 50000, price: 499 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 50K', followers: 50000, price: 499 },
-    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop', title: 'US Tiktok Shop 100K', followers: 100000, price: 669 },
-    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop', title: 'UK Tiktok Shop 100K', followers: 100000, price: 669 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 10K', followers: 10000, price: 200 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 10K', followers: 10000, price: 200 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 20K', followers: 20000, price: 250 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 20K', followers: 20000, price: 250 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 30K', followers: 30000, price: 300 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 30K', followers: 30000, price: 300 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 40K', followers: 40000, price: 350 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 40K', followers: 40000, price: 350 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 50K', followers: 50000, price: 400 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 50K', followers: 50000, price: 400 },
-    { platform: 'TikTok', region: 'US', type: 'Shop Affiliate', title: 'US Shop Affiliate 100K', followers: 100000, price: 450 },
-    { platform: 'TikTok', region: 'UK', type: 'Shop Affiliate', title: 'UK Shop Affiliate 100K', followers: 100000, price: 450 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 10K', followers: 10000, price: 250 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 10K', followers: 10000, price: 250 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 20K', followers: 20000, price: 320 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 20K', followers: 20000, price: 320 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 30K', followers: 30000, price: 380 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 30K', followers: 30000, price: 380 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 40K', followers: 40000, price: 440 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 40K', followers: 40000, price: 440 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 50K', followers: 50000, price: 499 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 50K', followers: 50000, price: 499 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Seller)', title: 'US Tiktok Shop 100K', followers: 100000, price: 669 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Seller)', title: 'UK Tiktok Shop 100K', followers: 100000, price: 669 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 10K', followers: 10000, price: 200 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 10K', followers: 10000, price: 200 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 20K', followers: 20000, price: 250 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 20K', followers: 20000, price: 250 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 30K', followers: 30000, price: 300 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 30K', followers: 30000, price: 300 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 40K', followers: 40000, price: 350 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 40K', followers: 40000, price: 350 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 50K', followers: 50000, price: 400 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 50K', followers: 50000, price: 400 },
+    { platform: 'TikTok', region: 'US', type: 'Tiktok Shop (Creator)', title: 'US Shop Affiliate 100K', followers: 100000, price: 450 },
+    { platform: 'TikTok', region: 'UK', type: 'Tiktok Shop (Creator)', title: 'UK Shop Affiliate 100K', followers: 100000, price: 450 },
     { platform: 'TikTok', region: 'US', type: 'Tiktok Monetized', title: 'Monetized Tiktok 10K', followers: 10000, price: 160 },
     { platform: 'TikTok', region: 'US', type: 'Tiktok Monetized', title: 'Monetized Tiktok 20K', followers: 20000, price: 200 },
     { platform: 'TikTok', region: 'US', type: 'Tiktok Monetized', title: 'Monetized Tiktok 30K', followers: 30000, price: 240 },
@@ -75,6 +175,7 @@ async function main(){
   ]
 
   for (const product of products) {
+    const metadata = buildProductMetadata(product)
     await prisma.product.create({ data: {
       platform: product.platform,
       region: product.region,
@@ -82,6 +183,8 @@ async function main(){
       title: product.title,
       followers: product.followers,
       price: product.price,
+      description: metadata.description,
+      features: metadata.features,
       hasVerificationFee: false,
       verificationPrice: 0,
       inStock: true

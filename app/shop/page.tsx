@@ -6,21 +6,22 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
 import { formatPrice } from "@/lib/data"
 import { formatFollowers } from "@/lib/utils"
 import { apiPath } from "@/lib/api"
 import { useCart } from "@/lib/cart-context"
 import { useStoreSettings } from "@/lib/store-settings-context"
 import { useUserAuth } from "@/lib/user-auth-context"
-import { Users, ShoppingCart, Search, Filter, CheckCircle, AlertCircle, Heart } from "lucide-react"
+import { SHOP_TYPE_CARDS, getShopTypeIdForProductType, normalizeShopProductType } from "@/lib/shop-types"
+import { Users, ShoppingCart, CheckCircle, AlertCircle, Heart } from "lucide-react"
 
 function PlatformCardIcon({ platform }: { platform: string }) {
   if (platform === "YouTube") {
@@ -40,10 +41,11 @@ function PlatformCardIcon({ platform }: { platform: string }) {
 }
 
 export default function ShopPage() {
-  const [platform, setPlatform] = useState<string>("all")
-  const [accountType, setAccountType] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<string>("popular")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<string>("price-low")
+  const [selectedShopType, setSelectedShopType] = useState<string | null>(null)
+  const [regionFilter, setRegionFilter] = useState<string>("all")
+  const [followersFilter, setFollowersFilter] = useState<string>("all")
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000])
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [justAdded, setJustAdded] = useState<string | null>(null)
@@ -81,6 +83,38 @@ export default function ShopPage() {
       setJustAdded(null)
     }, 1500)
   }
+
+  const parseFollowersNum = (followersValue: unknown): number => {
+    if (typeof followersValue === 'number' && Number.isFinite(followersValue)) {
+      return followersValue
+    }
+
+    if (typeof followersValue !== 'string') {
+      return 0
+    }
+
+    const raw = followersValue.trim().toLowerCase()
+
+    if (!raw || raw === 'varies' || raw === 'varies+') {
+      return 0
+    }
+
+    const numericValue = Number.parseFloat(raw)
+
+    if (Number.isNaN(numericValue)) {
+      return 0
+    }
+
+    if (raw.includes('m')) {
+      return Math.round(numericValue * 1000000)
+    }
+
+    if (raw.includes('k')) {
+      return Math.round(numericValue * 1000)
+    }
+
+    return Math.round(numericValue)
+  }
   
   // Convert products to accounts format
   const accounts = useMemo(() => {
@@ -93,13 +127,15 @@ export default function ShopPage() {
             ? 30
             : 0
 
+        const normalizedType = normalizeShopProductType(p.type) || (p.type || "Unknown")
+
         return {
           id: p.id,
           platform: (p.platform || "TikTok") as "TikTok" | "YouTube",
-          type: (p.type || "Unknown") as any,
+          type: normalizedType as any,
           title: p.title || p.platform || "",
           followers: p.followers,
-          followersNum: Number(p.followers || 0),
+          followersNum: parseFollowersNum(p.followers),
           price: Number(p.price || 0),
           originalPrice: p.originalPrice !== undefined ? Number(p.originalPrice || 0) : undefined,
           badge: p.badge || "",
@@ -114,27 +150,106 @@ export default function ShopPage() {
       })
   }, [products])
 
-  const filteredAccounts = useMemo(() => {
-    let filtered = [...accounts]
-    
-    if (platform !== "all") {
-      filtered = filtered.filter(a => a.platform.toLowerCase() === platform)
+  const shopTypeCards = useMemo(() => {
+    return SHOP_TYPE_CARDS.map((shopType) => {
+      const matchingAccounts = accounts.filter((account) => {
+        return getShopTypeIdForProductType(account.type) === shopType.id
+      })
+
+      return {
+        ...shopType,
+        count: matchingAccounts.length
+      }
+    })
+  }, [accounts])
+
+  const selectedShopTypeCard = SHOP_TYPE_CARDS.find((shopType) => shopType.id === selectedShopType) ?? null
+
+  const selectedTypeAccounts = useMemo(() => {
+    if (!selectedShopType) {
+      return []
     }
 
-    if (accountType !== "all") {
-      filtered = filtered.filter(a => a.type === accountType)
+    return accounts.filter((account) => getShopTypeIdForProductType(account.type) === selectedShopType)
+  }, [accounts, selectedShopType])
+
+  const showRegionFilter = useMemo(() => {
+    return selectedTypeAccounts.some((account) => account.region === "US" || account.region === "UK")
+  }, [selectedTypeAccounts])
+
+  const priceMin = useMemo(() => {
+    if (!selectedTypeAccounts.length) {
+      return 0
     }
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(a => 
-        a.title.toLowerCase().includes(query) ||
-        a.platform.toLowerCase().includes(query) ||
-        a.type.toLowerCase().includes(query) ||
-        a.description.toLowerCase().includes(query)
-      )
+
+    return Math.min(...selectedTypeAccounts.map((account) => account.price))
+  }, [selectedTypeAccounts])
+
+  const priceMax = useMemo(() => {
+    if (!selectedTypeAccounts.length) {
+      return 1000
     }
-    
+
+    return Math.max(...selectedTypeAccounts.map((account) => account.price))
+  }, [selectedTypeAccounts])
+
+  useEffect(() => {
+    if (!selectedShopType) {
+      return
+    }
+
+    setPriceRange([priceMin, priceMax])
+  }, [selectedShopType, priceMin, priceMax])
+
+  const filteredAccounts = useMemo(() => {
+    let filtered = [...accounts]
+
+    if (selectedShopType) {
+      filtered = filtered.filter((account) => getShopTypeIdForProductType(account.type) === selectedShopType)
+    }
+
+    if (showRegionFilter && regionFilter !== "all") {
+      filtered = filtered.filter((account) => account.region === regionFilter)
+    }
+
+    if (followersFilter !== "all") {
+      filtered = filtered.filter((account) => {
+        const followersNum = Number(account.followersNum || 0)
+
+        if (followersFilter === "under-10k") {
+          return followersNum < 10000
+        }
+
+        if (followersFilter === "10k-plus") {
+          return followersNum >= 10000 && followersNum < 20000
+        }
+
+        if (followersFilter === "20k-plus") {
+          return followersNum >= 20000 && followersNum < 30000
+        }
+
+        if (followersFilter === "30k-plus") {
+          return followersNum >= 30000 && followersNum < 40000
+        }
+
+        if (followersFilter === "40k-plus") {
+          return followersNum >= 40000 && followersNum < 50000
+        }
+
+        if (followersFilter === "50k-plus") {
+          return followersNum >= 50000 && followersNum < 100000
+        }
+
+        if (followersFilter === "100k-plus") {
+          return followersNum >= 100000
+        }
+
+        return true
+      })
+    }
+
+    filtered = filtered.filter((account) => account.price >= priceRange[0] && account.price <= priceRange[1])
+
     switch (sortBy) {
       case "price-low":
         filtered.sort((a, b) => a.price - b.price)
@@ -142,15 +257,12 @@ export default function ShopPage() {
       case "price-high":
         filtered.sort((a, b) => b.price - a.price)
         break
-      case "followers":
-        filtered.sort((a, b) => b.followersNum - a.followersNum)
-        break
       default:
         break
     }
-    
+
     return filtered
-  }, [accounts, platform, accountType, sortBy, searchQuery])
+  }, [accounts, selectedShopType, showRegionFilter, regionFilter, followersFilter, priceRange, sortBy])
 
   return (
     <div className="min-h-screen bg-white">
@@ -168,182 +280,279 @@ export default function ShopPage() {
           </div>
         </section>
         
-        <section className="py-3 sm:py-8 border-b border-gray-100 bg-white/95 backdrop-blur-md">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex flex-col gap-2 sm:gap-4 items-start sm:items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3 w-full">
-                <div className="relative flex-1 sm:w-80">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 sm:pl-10 rounded-full border-gray-200 text-xs sm:text-sm py-2 sm:py-3 h-auto"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 w-full">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 shrink-0" />
-                  <span className="text-[10px] sm:text-sm text-gray-500 hidden sm:inline">Filter:</span>
-                </div>
-                <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger className="w-20 sm:w-35 rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
-                    <SelectValue placeholder="Platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Platforms</SelectItem>
-                    <SelectItem value="tiktok">TikTok</SelectItem>
-                    <SelectItem value="youtube">YouTube</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={accountType} onValueChange={setAccountType}>
-                  <SelectTrigger className="w-24 sm:w-45 rounded-full text-[11px] sm:text-sm h-auto py-1.5 sm:py-2">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Monetized Tiktok">Monetized Tiktok</SelectItem>
-                    <SelectItem value="US Shop Affiliate">US Shop Affiliate</SelectItem>
-                    <SelectItem value="UK Shop Affiliate">UK Shop Affiliate</SelectItem>
-                    <SelectItem value="US TikTok Shop">US TikTok Shop</SelectItem>
-                    <SelectItem value="UK TikTok Shop">UK TikTok Shop</SelectItem>
-                    <SelectItem value="Non-TTS/Affiliate">Non-TTS/Affiliate</SelectItem>
-                    <SelectItem value="YouTube Aged">YouTube Aged</SelectItem>
-                    <SelectItem value="YouTube Monetized">YouTube Monetized</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-37.5 rounded-full">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="followers">Most Followers</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </section>
-        
         <section className="py-12">
           <div className="container mx-auto px-4">
-            <p className="text-gray-500 mb-6">{filteredAccounts.length} accounts available</p>
-            
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredAccounts.map((account) => (
-                <div 
-                  key={account.id}
-                  className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[#FE2C55] transition-all hover:shadow-xl group"
-                >
-                  <div className="bg-black p-4 relative">
-                    {account.badge && (
-                      <Badge className={`${account.badgeColor} absolute top-3 right-3`}>
-                        {account.badge}
-                      </Badge>
-                    )}
-                    <div className="text-white font-bold text-sm sm:text-[15px] leading-tight pr-10">{account.title || account.platform}</div>
-                    <div className="text-[#25F4EE] text-[11px] sm:text-xs mt-1 pr-10">{account.type}</div>
-                    <div className="absolute bottom-2 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 translate-y-1">
-                      <PlatformCardIcon platform={account.platform} />
+            {selectedShopTypeCard ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <div>
+                    <div className="mb-2">
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-[#FE2C55] hover:text-[#c71a3d]"
+                        onClick={() => {
+                          setSelectedShopType(null)
+                          setRegionFilter('all')
+                          setFollowersFilter('all')
+                          setSortBy('price-low')
+                          setPriceRange([0, 1000])
+                        }}
+                      >
+                        ← All Account Types
+                      </button>
                     </div>
+                    <h2 className="text-3xl font-bold text-black">{selectedShopTypeCard.title}</h2>
+                    <p className="text-gray-500 mt-2">{selectedShopTypeCard.description}</p>
                   </div>
-                  
-                  <div className="p-6">
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Users className="w-4 h-4" />
-                          <span>Followers</span>
-                        </div>
-                        <span className="font-bold text-black">{formatFollowers(account.followers)}</span>
-                      </div>
-                      {account.platform === "TikTok" && account.type !== "Non-TTS/Affiliate" && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>Verification</span>
-                          </div>
-                          <span className={`font-medium ${account.verificationPrice > 0 ? "text-orange-500" : "text-gray-500"}`}>
-                            {account.verificationPrice > 0 ? `+${formatPrice(account.verificationPrice)}` : "Not available"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-gray-500">Price</span>
-                        <div className="flex items-baseline gap-2">
-                          {account.originalPrice && account.originalPrice > account.price ? (
-                            <span className="text-sm font-medium text-red-500 line-through">{formatPrice(account.originalPrice)}</span>
-                          ) : null}
-                          <span className="text-2xl font-bold text-black">{formatPrice(account.price)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          className={`rounded-full border border-gray-200 p-2 transition-colors ${isFavorite(account.id) ? 'bg-[#FE2C55]/10 text-[#FE2C55]' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (!isAuthenticated) {
-                              redirectToLogin()
-                              return
-                            }
-                            if (isFavorite(account.id)) {
-                              void removeFromFavorites(account.id)
-                            } else {
-                              void addToFavorites(account.id)
-                            }
-                          }}
-                          aria-label={isFavorite(account.id) ? 'Remove from favorites' : 'Add to favorites'}
-                        >
-                          <Heart className={`w-4 h-4 ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-gray-500'}`} />
-                        </button>
-
-                        <Link href={`/product/${account.id}`} className="flex-1">
-                          <Button variant="outline" className="w-full rounded-full border-gray-200 text-sm py-2">
-                            View Details
-                          </Button>
-                        </Link>
-
-                        <button
-                          type="button"
-                          className={`rounded-full px-3 py-1.5 h-auto text-sm transition-colors ${isInCart(account.id) ? 'bg-[#25F4EE] text-black' : 'bg-[#FE2C55] text-white hover:bg-[#FE2C55]/90'}`}
-                          onClick={() => account.inStock && handleAddToCart(account)}
-                          disabled={!account.inStock || isInCart(account.id)}
-                        >
-                          {!account.inStock ? 'Out of Stock' : isInCart(account.id) ? <CheckCircle className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="text-gray-500">{filteredAccounts.length} accounts available</span>
                 </div>
-              ))}
-            </div>
-            
-            {filteredAccounts.length === 0 && (
-              <div className="text-center py-16">
-                <p className="text-gray-500 text-lg">No accounts found matching your criteria.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4 rounded-full"
-                  onClick={() => {
-                    setPlatform("all")
-                    setAccountType("all")
-                    setSearchQuery("")
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
+
+                <section className="rounded-3xl border border-gray-200 bg-gray-50 p-4 mb-6">
+                  <div className={`grid grid-cols-1 gap-4 ${showRegionFilter ? 'md:grid-cols-[minmax(170px,220px)_minmax(170px,230px)_minmax(170px,210px)_minmax(250px,1fr)]' : 'md:grid-cols-[minmax(170px,220px)_minmax(170px,230px)_minmax(250px,1fr)]'} md:items-end`}>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-2">
+                        Price
+                      </label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-full rounded-full">
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="price-low">Low to High</SelectItem>
+                          <SelectItem value="price-high">High to Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-2">
+                        Followers
+                      </label>
+                      <Select value={followersFilter} onValueChange={setFollowersFilter}>
+                        <SelectTrigger className="w-full rounded-full">
+                          <SelectValue placeholder="Followers" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Followers</SelectItem>
+                          <SelectItem value="under-10k">Less than 10K</SelectItem>
+                          <SelectItem value="10k-plus">+10K</SelectItem>
+                          <SelectItem value="20k-plus">+20K</SelectItem>
+                          <SelectItem value="30k-plus">+30K</SelectItem>
+                          <SelectItem value="40k-plus">+40K</SelectItem>
+                          <SelectItem value="50k-plus">+50K</SelectItem>
+                          <SelectItem value="100k-plus">+100K</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {showRegionFilter && (
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-2">
+                          Region
+                        </label>
+                        <Select value={regionFilter} onValueChange={setRegionFilter}>
+                          <SelectTrigger className="w-full rounded-full">
+                            <SelectValue placeholder="Region" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Regions</SelectItem>
+                            <SelectItem value="US">US</SelectItem>
+                            <SelectItem value="UK">UK</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-start gap-3 mb-2">
+                        <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                          Price Range
+                        </label>
+                        <span className="text-[11px] font-semibold text-gray-600">
+                          {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Slider
+                          className="h-3 w-full max-w-52.5"
+                          min={priceMin}
+                          max={priceMax}
+                          step={1}
+                          value={priceRange}
+                          onValueChange={(value) => {
+                            const safeValues = value as number[]
+                            const nextMin = Math.min(safeValues[0] ?? priceMin, safeValues[1] ?? priceMax)
+                            const nextMax = Math.max(safeValues[1] ?? priceMax, safeValues[0] ?? priceMin)
+                            setPriceRange([nextMin, nextMax])
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-black hover:text-white transition-colors shrink-0"
+                          onClick={() => {
+                            setSortBy('price-low')
+                            setRegionFilter('all')
+                            setFollowersFilter('all')
+                            setPriceRange([priceMin, priceMax])
+                          }}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredAccounts.map((account) => (
+                    <div
+                      key={account.id}
+                      className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[#FE2C55] transition-all hover:shadow-xl group"
+                    >
+                      <div className="bg-black p-4 relative">
+                        {account.badge && (
+                          <Badge className={`${account.badgeColor} absolute top-3 right-3`}>
+                            {account.badge}
+                          </Badge>
+                        )}
+                        <div className="text-white font-bold text-sm sm:text-[15px] leading-tight pr-10">{account.title || account.platform}</div>
+                        <div className="text-[#25F4EE] text-[11px] sm:text-xs mt-1 pr-10">{account.type}</div>
+                        <div className="absolute bottom-2 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 translate-y-1">
+                          <PlatformCardIcon platform={account.platform} />
+                        </div>
+                      </div>
+
+                      <div className="p-6">
+                        <div className="space-y-3 mb-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Users className="w-4 h-4" />
+                              <span>Followers</span>
+                            </div>
+                            <span className="font-bold text-black">{formatFollowers(account.followers)}</span>
+                          </div>
+                          {account.platform === "TikTok" && account.type !== "Non-TTS/Affiliate" && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <AlertCircle className="w-4 h-4" />
+                                <span>Verification</span>
+                              </div>
+                              <span className={`font-medium ${account.verificationPrice > 0 ? "text-orange-500" : "text-gray-500"}`}>
+                                {account.verificationPrice > 0 ? `+${formatPrice(account.verificationPrice)}` : "Not available"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-gray-500">Price</span>
+                            <div className="flex items-baseline gap-2">
+                              {account.originalPrice && account.originalPrice > account.price ? (
+                                <span className="text-sm font-medium text-red-500 line-through">{formatPrice(account.originalPrice)}</span>
+                              ) : null}
+                              <span className="text-2xl font-bold text-black">{formatPrice(account.price)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              className={`rounded-full border border-gray-200 p-2 transition-colors ${isFavorite(account.id) ? 'bg-[#FE2C55]/10 text-[#FE2C55]' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (!isAuthenticated) {
+                                  redirectToLogin()
+                                  return
+                                }
+                                if (isFavorite(account.id)) {
+                                  void removeFromFavorites(account.id)
+                                } else {
+                                  void addToFavorites(account.id)
+                                }
+                              }}
+                              aria-label={isFavorite(account.id) ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <Heart className={`w-4 h-4 ${isFavorite(account.id) ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-gray-500'}`} />
+                            </button>
+
+                            <Link href={`/product/${account.id}`} className="flex-1">
+                              <Button variant="outline" className="w-full rounded-full border-gray-200 text-sm py-2">
+                                View Details
+                              </Button>
+                            </Link>
+
+                            <button
+                              type="button"
+                              className={`rounded-full px-3 py-1.5 h-auto text-sm transition-colors ${isInCart(account.id) ? 'bg-[#25F4EE] text-black' : 'bg-[#FE2C55] text-white hover:bg-[#FE2C55]/90'}`}
+                              onClick={() => account.inStock && handleAddToCart(account)}
+                              disabled={!account.inStock || isInCart(account.id)}
+                            >
+                              {!account.inStock ? 'Out of Stock' : isInCart(account.id) ? <CheckCircle className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {filteredAccounts.length === 0 && (
+                  <div className="text-center py-16">
+                    <p className="text-gray-500 text-lg">No accounts found matching your criteria.</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 rounded-full"
+                      onClick={() => {
+                        setSelectedShopType(null)
+                        setFollowersFilter('all')
+                        setPriceRange([priceMin, priceMax])
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-black mb-2">Choose an account type</h2>
+                    <p className="text-gray-500">Select a product family to see the available accounts.</p>
+                  </div>
+                  <span className="text-gray-500">{accounts.length} accounts available</span>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {shopTypeCards.map((shopType) => (
+                    <button
+                      key={shopType.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedShopType(shopType.id)
+                        setRegionFilter('all')
+                      }}
+                      className="text-left bg-white rounded-3xl border border-gray-200 p-8 hover:border-[#FE2C55] hover:shadow-xl transition-all duration-200 group"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="w-full">
+                          <div className="mb-4">
+                            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black text-white">
+                              <PlatformCardIcon platform={shopType.id.includes('youtube') || shopType.id.includes('aged') ? 'YouTube' : 'TikTok'} />
+                            </span>
+                          </div>
+                          <h3 className="text-2xl font-bold text-black group-hover:text-[#FE2C55] transition-colors">
+                            {shopType.title}
+                          </h3>
+                          <p className="mt-3 text-sm leading-6 text-gray-500">
+                            {shopType.description}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </section>

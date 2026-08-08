@@ -6,6 +6,7 @@ import { getAnonymousInitials } from "@/lib/utils"
 import { useUserAuth } from "@/lib/user-auth-context"
 import { useAdminAuth } from "@/lib/admin-auth-context"
 import type { Product, ProductType, Order, OrderProduct, Review, Customer, Subscriber, Affiliate } from "@/lib/types"
+import { normalizeShopProductType } from "@/lib/shop-types"
 
 // Extended Account type that matches both admin and customer needs
 export interface Account {
@@ -246,11 +247,14 @@ function mapBackendProduct(product: any): Product {
       ? 30
       : 0
 
+  const rawType = product.type ? String(product.type) : "Tiktok Shop"
+  const normalizedType = normalizeShopProductType(rawType) || rawType
+
   return {
     id: product.id,
     platform: product.platform as "TikTok" | "YouTube",
     region: product.region as "US" | "UK" | undefined,
-    type: (product.type ? String(product.type) : "Tiktok Shop") as ProductType,
+    type: normalizedType as ProductType,
     title: product.title ?? "",
     followers: String(product.followers ?? "0"),
     followersNum: Number(product.followers ?? 0),

@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "tsx tests/guest-cart.test.ts",
     "seed": "tsx prisma/seed.ts",
-    "backfill:verification-price": "tsx prisma/backfill-verification-price.ts"
+    "backfill:verification-price": "tsx prisma/backfill-verification-price.ts",
+    "backfill:product-metadata": "tsx prisma/backfill-product-metadata.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
